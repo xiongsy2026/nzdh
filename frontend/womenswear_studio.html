@@ -1,0 +1,2737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动作迁移工作台</title>
+    <style>
+        /* ============= WEEKSIR 风格 tokens ============= */
+        :root {
+            --accent-from: #8b5cf6;
+            --accent-to: #ec4899;
+            --accent: #8b5cf6;
+            --bg-0: #0a0a0f;
+            --bg-1: #12121a;
+            --bg-2: #1a1a26;
+            --bg-card: rgba(255,255,255,0.04);
+            --border-soft: rgba(255,255,255,0.08);
+            --border-strong: rgba(255,255,255,0.14);
+            --text-0: #ffffff;
+            --text-1: rgba(255,255,255,0.85);
+            --text-2: rgba(255,255,255,0.6);
+            --text-3: rgba(255,255,255,0.4);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-soft: 0 4px 24px rgba(0,0,0,0.35);
+            --shadow-accent: 0 6px 28px rgba(139,92,246,0.35);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-0);
+            color: var(--text-0);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse 80% 60% at 20% -10%, rgba(139,92,246,0.18), transparent 60%),
+                radial-gradient(ellipse 60% 50% at 90% 10%, rgba(236,72,153,0.12), transparent 60%);
+            background-attachment: fixed;
+        }
+        .topbar {
+            background: linear-gradient(135deg, var(--accent-from) 0%, var(--accent-to) 100%);
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            backdrop-filter: blur(12px);
+            box-shadow: var(--shadow-accent);
+        }
+        .topbar h1 { font-size: 1.5em; color: #fff; letter-spacing: 2px; position: relative; font-weight: 800; }
+        .topbar h1 .free-badge { position: absolute; top: -10px; right: -42px; background: rgba(255,255,255,0.22); color: #fff; font-size: .36em; font-weight: 800; padding: 3px 7px; border-radius: 8px; letter-spacing: 1px; box-shadow: 0 2px 6px rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,0.3); }
+        .topbar .tag { background: rgba(255,255,255,.2); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: .8em; border: 1px solid rgba(255,255,255,0.25); }
+
+        /* === 新手引导样式 === */
+        .onboard-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.78); z-index: 1100; display: flex; align-items: center; justify-content: center; animation: fadeIn .25s; }
+        .onboard-card { width: 560px; max-width: 92vw; background: linear-gradient(180deg,#1a1a30 0%,#16162a 100%); border: 1px solid #3a3a5c; border-radius: 14px; padding: 28px 32px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+        .onboard-title { font-size: 1.3em; font-weight: 700; color: #e2e8f0; text-align: center; margin-bottom: 6px; }
+        .onboard-sub { font-size: .82em; color: #888; text-align: center; margin-bottom: 20px; }
+        .onboard-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+        .onboard-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #20203a; border-radius: 10px; border-left: 3px solid #0ea5e9; }
+        .onboard-step-num { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg,#0ea5e9,#6366f1); color: #fff; font-size: .82em; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .onboard-step-text { font-size: .86em; color: #c0c0d0; line-height: 1.55; }
+        .onboard-step-text b { color: #e2e8f0; }
+        .onboard-actions { display: flex; gap: 10px; justify-content: center; margin-bottom: 12px; }
+        .onboard-btn { padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-size: .92em; font-family: inherit; font-weight: 600; }
+        .onboard-btn-primary { background: linear-gradient(90deg,#0ea5e9,#6366f1); color: #fff; }
+        .onboard-btn-secondary { background: #2a2a44; color: #c0c0d0; border: 1px solid #3a3a5c; }
+        .onboard-dismiss { text-align: center; font-size: .78em; color: #666; }
+        .onboard-dismiss label { cursor: pointer; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 字段级帮助 ❓ */
+        .field-help { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #3a3a5c; color: #a5a5c8; font-size: .68em; cursor: pointer; margin-left: 6px; vertical-align: middle; user-select: none; }
+        .field-help:hover { background: #0ea5e9; color: #fff; }
+        .field-help-pop { position: absolute; z-index: 50; width: 280px; background: #1e1e36; border: 1px solid #3a3a5c; border-radius: 10px; padding: 12px 14px; font-size: .8em; color: #c0c0d0; line-height: 1.6; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+        .field-help-pop b { color: #e2e8f0; }
+        .field-help-pop .ok { color: #22c55e; }
+        .field-help-pop .bad { color: #f87171; }
+        .field-help-pop img { max-width: 100%; border-radius: 6px; margin-top: 6px; }
+
+        /* 空状态引导卡片 */
+        .empty-guide { padding: 18px 14px; background: linear-gradient(180deg,#1a1a30 0%,#20203a 100%); border: 1px dashed #3a3a5c; border-radius: 10px; text-align: center; }
+        .empty-guide-title { font-size: .92em; color: #a5a5c8; font-weight: 600; margin-bottom: 12px; }
+        .empty-guide-steps { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 14px; }
+        .empty-guide-step { display: flex; align-items: center; gap: 8px; font-size: .78em; color: #888; }
+        .empty-guide-step .num { width: 20px; height: 20px; border-radius: 50%; background: #2a2a44; color: #a5a5c8; font-size: .72em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .empty-guide-btn { margin-top: 4px; padding: 8px 18px; background: linear-gradient(90deg,#0ea5e9,#6366f1); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: .85em; font-family: inherit; font-weight: 600; }
+
+        /* 示例任务按钮 */
+        .load-example-btn { margin-top: 10px; padding: 10px; background: linear-gradient(90deg,#f59e0b,#ef4444); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: .9em; font-family: inherit; font-weight: 600; width: 100%; }
+        .load-example-btn:hover { opacity: .92; }
+        .main { display: flex; min-height: calc(100vh - 60px); }
+        .input-panel { width: 440px; min-width: 360px; background: var(--bg-card); border-right: 1px solid var(--border-soft); padding: 24px; overflow-y: auto; backdrop-filter: blur(8px); }
+        .section-title { font-size: 1.05em; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .section-title .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .dot-required { background: #ef4444; }
+        .text-field { width:100%; box-sizing:border-box; margin-bottom:16px; padding:12px 14px; background: rgba(255,255,255,0.04); border:1px solid var(--border-soft); border-radius: var(--radius-md); color: #fff; font-size:.95em; outline:none; transition: border-color .15s, box-shadow .15s; }
+        .text-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+        .text-field::placeholder { color: var(--text-3); }
+        .run-btn { width: 100%; padding: 14px; border: none; border-radius: 999px; font-size: 1.1em; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, var(--accent-from) 0%, var(--accent-to) 100%); color: #fff; transition: all .2s; letter-spacing: 1px; box-shadow: 0 4px 16px rgba(139,92,246,0.3); }
+        .run-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(139,92,246,0.45); }
+        .run-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+        .run-btn.running { background: linear-gradient(135deg, #f59e0b, #ef4444); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
+        .output-panel { flex: 1; padding: 24px; overflow-y: auto; background: transparent; }
+        .status-panel { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: var(--radius-xl); padding: 24px; margin-bottom: 20px; backdrop-filter: blur(8px); box-shadow: var(--shadow-soft); }
+        .status-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .status-badge { padding: 4px 16px; border-radius: 20px; font-size: .85em; font-weight: 600; }
+        .badge-idle { background: #2a2a44; color: #888; }
+        .badge-running { background: #1e3a5f; color: #60a5fa; animation: pulse 1.5s infinite; }
+        .badge-completed { background: #14532d; color: #4ade80; }
+        .badge-failed { background: #451a1a; color: #f87171; }
+        .progress-bar-wrap { background: #2a2a44; border-radius: 6px; height: 10px; margin-bottom: 16px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #0ea5e9, #6366f1); transition: width .4s; width: 0%; }
+        .stage-text { font-size: .9em; color: #7dd3fc; margin-bottom: 12px; }
+        .sse-panel { background: #0d0d1a; border: 1px solid #2a2a44; border-radius: 10px; padding: 12px 14px; }
+        .sse-title { font-size: .75em; color: #6b7280; letter-spacing: .08em; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .sse-title b { color: #7dd3fc; font-weight: 700; letter-spacing: 0; }
+        .log-box { background: transparent; border-radius: 0; padding: 0; font-family: "Cascadia Code", "Fira Code", monospace; font-size: .78em; color: #8b8bab; max-height: 220px; overflow-y: auto; line-height: 1.7; }
+        .log-line.running { color: #60a5fa; }
+        .log-line.done { color: #4ade80; }
+        .log-line.error { color: #f87171; }
+        .sse-error { display: none; margin-top: 8px; padding: 10px 12px; background: #3f1d1d; border: 1px solid #7f1d1d; border-radius: 8px; color: #fca5a5; font-size: .82em; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+        .progress-bar-fill.failed { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+        .preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+        .steps-bar { display: flex; gap: 4px; margin-top: 16px; }
+        .step-item { flex: 1; height: 8px; border-radius: 4px; background: #2a2a44; transition: background .3s; }
+        .step-item.active { background: #3b82f6; }
+        .step-item.done { background: #22c55e; }
+        .step-item.failed { background: #f87171; }
+        .step-item.skipped { background: #3a3a4c; opacity: .6; }
+        .step-labels { display: flex; gap: 4px; margin-top: 6px; font-size: .68em; color: #666; }
+        .step-labels span { flex: 1; text-align: center; }
+        .retry-btn { padding: 10px 18px; border-radius: 8px; border: 1px solid #f59e0b; background: rgba(245,158,11,.15); color: #fbbf24; cursor: pointer; font-size: .88em; font-weight: 600; transition: all .2s; }
+        .retry-btn:hover { background: rgba(245,158,11,.25); }
+        .retry-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .preview-item { background: #1e1e36; border-radius: 8px; padding: 8px; text-align: center; min-height: 120px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        .preview-item img { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 0 auto; object-fit: contain; }
+        .preview-item video { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 0 auto; object-fit: contain; background:#000; }
+        .preview-item .label { font-size: .75em; color: #888; margin-top: 6px; }
+        .preview-item.placeholder { align-items: center; justify-content: center; color: #444; font-size: .8em; }
+        .video-result { background: #16162a; border-radius: 14px; padding: 24px; margin-top: 20px; }
+        .video-result h3 { margin-bottom: 16px; font-size: 1.1em; }
+        .video-player { width: 100%; border-radius: 10px; background: #000; max-height: 520px; }
+        .video-placeholder { width: 100%; height: 280px; border-radius: 10px; background: #1e1e36; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-size: 1.2em; gap: 12px; }
+        .video-placeholder .ph-icon { font-size: 3em; }
+        .result-links { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .result-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; background: #1e1e36; color: #60a5fa; text-decoration: none; font-size: .9em; transition: background .2s; }
+        .result-link:hover { background: #2a2a5c; }
+        .result-link.publish-link { background: linear-gradient(90deg, #10b981, #06b6d4); color: #fff; }
+        /* 视频预览 + 抖音发布工作台 并排布局 */
+        .video-publish-row { display: flex; gap: 20px; margin-top: 20px; align-items: stretch; }
+        .video-col { flex: 1; min-width: 0; }
+        .publish-col { width: 380px; min-width: 360px; background: #16162a; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; align-self: stretch; }
+        .publish-col h3 { margin-bottom: 4px; font-size: 1.05em; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .publish-col .input-group label { display: block; font-size: .8em; color: #a5a5c8; margin-bottom: 6px; }
+        .publish-col .input-group input, .publish-col .input-group textarea { width: 100%; padding: 10px 12px; background: #1e1e36; border: 1px solid #3a3a5c; border-radius: 8px; color: #fff; font-size: .9em; outline: none; font-family: inherit; }
+        .publish-col .input-group input:focus, .publish-col .input-group textarea:focus { border-color: #10b981; }
+        .publish-col .input-group textarea { resize: vertical; min-height: 70px; }
+        .publish-login-btn { padding: 8px 16px; border: 1px solid #3a3a5c; border-radius: 8px; background: #1e1e36; color: #7dd3fc; cursor: pointer; font-size: .85em; transition: background .2s; }
+        .publish-login-btn:hover { background: #2a2a5c; }
+        .publish-login-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .publish-run-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 1em; font-weight: 600; cursor: pointer; background: linear-gradient(90deg, #10b981, #06b6d4); color: #fff; transition: all .2s; letter-spacing: 1px; }
+        .publish-run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,.4); }
+        .publish-run-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .publish-stage { background: #1e1e36; border-radius: 8px; padding: 12px; font-size: .85em; color: #7dd3fc; line-height: 1.6; min-height: 44px; }
+        .publish-spinner { display:inline-block;width:14px;height:14px;border:2px solid #3d3d66;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .tag-item { background: #1e1e36; padding: 3px 10px; border-radius: 16px; font-size: .78em; color: #7dd3fc; border: 1px solid #3a3a5c; }
+        /* 模式 Tab */
+        .source-tabs { display:flex;gap:4px;background:#1e1e36;border-radius:10px;padding:4px;margin-bottom:18px; }
+        .source-tab { flex:1;padding:10px;text-align:center;border-radius:8px;cursor:pointer;font-size:.9em;color:#888;transition:all .2s;border:1px solid transparent; }
+        .source-tab.active { background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;border-color:#0ea5e9; }
+        /* 上传位卡片 */
+        .upload-card { background:#1e1e36;border:2px dashed #3a3a5c;border-radius:10px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;position:relative; }
+        .upload-card:hover { border-color:#0ea5e9;background:#22223e; }
+        .upload-card .icon { font-size:1.8em;opacity:.5;margin-bottom:6px; }
+        .upload-card .label { font-size:.82em;color:#888; }
+        .upload-card .filename { font-size:.72em;color:#7dd3fc;margin-top:4px;word-break:break-all; }
+        .upload-card.has-file { border-color:#10b981;border-style:solid;background:#0f2a1f; }
+        .upload-card.has-file .icon { opacity:1; }
+        .upload-card.has-file .label { color:#4ade80; }
+        .upload-card .preview-img { max-width:100%;max-height:120px;border-radius:6px;margin-top:6px;display:block;margin-left:auto;margin-right:auto; }
+        .upload-card .preview-video { max-width:100%;max-height:120px;border-radius:6px;margin-top:6px;display:block;margin-left:auto;margin-right:auto;background:#000; }
+        .upload-card .del-btn { position:absolute;top:6px;right:6px;background:rgba(239,68,68,.2);color:#f87171;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.8em;display:none; }
+        .upload-card.has-file .del-btn { display:block; }
+        .upload-section { display:none; }
+        .upload-section.active { display:block; }
+        .upload-hint { font-size:.72em;color:#666;margin:-8px 0 12px; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>动作迁移工作台<span class="free-badge">FREE</span></h1>
+    <button class="tag" style="border:none;cursor:pointer;font-family:inherit;" onclick="openSettings()">⚙️ 设置</button>
+</div>
+<div class="main">
+    <!-- 左侧输入面板 -->
+    <div class="input-panel">
+        <!-- 模式选择（FR-4 两卡片）：商品出片 / 素材出片 -->
+        <div class="source-tabs" style="gap:10px;">
+            <div class="source-tab active" data-source="product" onclick="switchSourceTab('product')" style="padding:14px 10px;">
+                🛒 <b>商品出片</b><br><span style="font-size:.72em;opacity:.75;">有商品链接，自动穿到模特身上</span>
+            </div>
+            <div class="source-tab" data-source="creator" onclick="switchSourceTab('creator')" style="padding:14px 10px;">
+                🎨 <b>素材出片</b><br><span style="font-size:.72em;opacity:.75;">有现成图片，换场景换动作</span>
+            </div>
+        </div>
+
+        <!-- ───── 商品出片（product） ───── -->
+        <div class="upload-section active" id="productSection">
+            <div class="section-title"><span class="dot dot-required"></span>抖音商品链接<span class="field-help" data-help="productUrl">?</span></div>
+            <input type="text" class="text-field" id="productUrl" placeholder="https://v.douyin.com/xxxxx/ 或完整商城链接">
+
+            <div class="section-title"><span class="dot dot-required"></span>模仿的抖音视频链接<span class="field-help" data-help="videoUrl">?</span></div>
+            <input type="text" class="text-field" id="videoUrl" placeholder="https://v.douyin.com/xxxxx/">
+
+            <div class="section-title"><span class="dot dot-required"></span>模特图<span class="field-help" data-help="productModel">?</span></div>
+            <div class="upload-card" id="linkModelImageCard" onclick="document.getElementById('linkModelImageInput').click()">
+                <div class="icon">👧</div>
+                <div class="label">点击上传模特图</div>
+                <div class="filename" id="linkModelImageFilename"></div>
+                <button class="del-btn" onclick="clearUpload('linkModelImage',event)">×</button>
+            </div>
+            <input type="file" id="linkModelImageInput" accept="image/*" style="display:none;">
+            <div class="upload-hint">必填。用于 Agnes 融合生成动作迁移参考图</div>
+
+            <div class="section-title"><span class="dot" style="background:#6366f1;"></span>背景图（可选）<span class="field-help" data-help="productBg">?</span></div>
+            <div class="upload-card" id="productSceneImageCard" onclick="document.getElementById('productSceneImageInput').click()">
+                <div class="icon">🖼️</div>
+                <div class="label">点击上传背景图（可选）</div>
+                <div class="filename" id="productSceneImageFilename"></div>
+                <button class="del-btn" onclick="clearUpload('productSceneImage',event)">×</button>
+            </div>
+            <input type="file" id="productSceneImageInput" accept="image/*" style="display:none;">
+            <div class="upload-hint">上传背景图：模特背景融合+模仿视频融合；不传：下载模仿视频截帧作背景、替换模特人物</div>
+        </div>
+
+        <!-- ───── 素材出片（creator） ───── -->
+        <div class="upload-section" id="creatorSection">
+            <div class="section-title"><span class="dot dot-required"></span>模特图<span class="field-help" data-help="creatorModel">?</span></div>
+            <div class="upload-card" id="rawProductCard" onclick="document.getElementById('rawProductInput').click()">
+                <div class="icon">👧</div>
+                <div class="label">点击上传模特图</div>
+                <div class="filename" id="rawProductFilename"></div>
+                <button class="del-btn" onclick="clearUpload('rawProduct',event)">×</button>
+            </div>
+            <input type="file" id="rawProductInput" accept="image/*" style="display:none;">
+            <div class="upload-hint">必填。上传模特图（人物图），兼作服装真值；系统自动识别（含模特→直接用作模特；仅服装→默认模特兜底）</div>
+
+            <div class="section-title"><span class="dot dot-required"></span>模仿视频<span class="field-help" data-help="creatorVideo">?</span></div>
+            <div class="upload-card" id="sourceVideoCard" onclick="document.getElementById('sourceVideoInput').click()">
+                <div class="icon">🎬</div>
+                <div class="label">点击上传模仿视频</div>
+                <div class="filename" id="sourceVideoFilename"></div>
+                <button class="del-btn" onclick="clearUpload('sourceVideo',event)">×</button>
+            </div>
+            <input type="file" id="sourceVideoInput" accept="video/*" style="display:none;">
+            <div class="upload-hint">必填。动作迁移的动作源</div>
+
+            <div class="section-title"><span class="dot" style="background:#a5a5c8;"></span>背景图（可选）<span class="field-help" data-help="creatorBg">?</span></div>
+            <div class="upload-card" id="sceneImageCard" onclick="document.getElementById('sceneImageInput').click()">
+                <div class="icon">🖼️</div>
+                <div class="label">点击上传背景图（可选）</div>
+                <div class="filename" id="sceneImageFilename"></div>
+                <button class="del-btn" onclick="clearUpload('sceneImage',event)">×</button>
+            </div>
+            <input type="file" id="sceneImageInput" accept="image/*" style="display:none;">
+            <div class="upload-hint">可选。不传则自动使用模仿视频场景（抽关键帧作背景）</div>
+        </div>
+
+        <div style="padding:10px;background:#1e1e36;border:1px solid #3a3a5c;border-radius:6px;font-size:.75em;color:#888;margin-bottom:16px;text-align:center;">
+            🤖 RPA 内置浏览器（Playwright + ComfyUI iframe 抓取预览视频）
+        </div>
+
+        <button class="run-btn" id="runBtn" onclick="runPipeline()">开始生成</button>
+        <button class="run-btn" id="abortRunBtn" style="display:none;margin-top:10px;background:linear-gradient(90deg,#64748b,#475569);" onclick="abortTask()">⛔ 中止任务</button>
+        <button class="run-btn" id="retryRunBtn" style="display:none;margin-top:10px;background:linear-gradient(90deg,#f59e0b,#ef4444);" onclick="retryFailed()">重试失败步骤</button>
+        <button class="run-btn" id="newTaskBtn" style="margin-top:10px;background:linear-gradient(90deg,#3b82f6,#8b5cf6);" onclick="newTask()">🆕 新建任务</button>
+        <button class="load-example-btn" onclick="loadExampleTask()">🚀 载入示例任务（一键体验）</button>
+
+        <div style="margin-top:24px;padding:14px;background:#1e1e36;border-radius:10px;font-size:.82em;color:#888;line-height:1.7;" id="flowDesc">
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">流程说明（商品出片）</div>
+            1. 解析商品链接 → 下载原始商品图<br>
+            2. Agnes 生成 3:4 白底平铺图<br>
+            3. Agnes 用模特图生成 9:16 动作迁移参考图<br>
+            <span style="color:#6b7280;">　（背景图可选，上传则模特背景融合+模仿视频融合 / 缺省下载模仿视频截帧作背景、替换模特人物）</span><br>
+            4. 下载抖音模仿视频<br>
+            5. 动作迁移（RPA 出片）<br>
+            6. 下载结果视频
+        </div>
+
+        <div class="history-section" id="historySection" style="margin-top:24px;">
+            <h3 style="margin:0 0 12px;font-size:1.05em;color:#a5a5c8;font-weight:600;display:flex;align-items:center;gap:8px;"><span class="dot dot-required" style="background:#0ea5e9;"></span> 历史视频（刷新不丢失）</h3>
+            <div id="historyList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div id="emptyGuide" style="display:none;">
+                <div class="empty-guide">
+                    <div class="empty-guide-title">👋 欢迎使用动作迁移工作台</div>
+                    <div class="empty-guide-steps">
+                        <div class="empty-guide-step"><span class="num">1</span>选择模式：商品出片（有商品链接）/ 素材出片（有现成图）</div>
+                        <div class="empty-guide-step"><span class="num">2</span>填入链接、上传模特图（背景图可选）</div>
+                        <div class="empty-guide-step"><span class="num">3</span>点击「开始生成」，等待约 5-10 分钟</div>
+                        <div class="empty-guide-step"><span class="num">4</span>生成完毕后可一键发布到抖音</div>
+                    </div>
+                    <button class="empty-guide-btn" onclick="loadExampleTask()">🚀 载入示例任务体验</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧输出面板 -->
+    <div class="output-panel">
+        <div class="status-panel">
+            <div class="status-header">
+                <span class="status-badge badge-idle" id="statusBadge">待机</span>
+                <span style="font-size:.85em;color:#888;" id="rhInfo"></span>
+            </div>
+            <div class="sse-panel" id="ssePanel">
+                <div class="sse-title">
+                    <span>实时进度</span>
+                    <b id="progressPct">0%</b>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <div class="progress-bar-wrap" style="flex:1;margin-bottom:0;height:12px;"><div class="progress-bar-fill" id="progressFill"></div></div>
+                </div>
+                <div class="stage-text" id="stageText" style="margin-bottom:8px;">请输入链接并点击"开始生成"</div>
+                <div class="sse-error" id="sseError"></div>
+                <div class="log-box" id="logBox"></div>
+            </div>
+        </div>
+
+        <div class="steps-bar" id="stepsBar">
+            <div class="step-item" id="ws_step1"></div>
+            <div class="step-item" id="ws_step2"></div>
+            <div class="step-item" id="ws_step3"></div>
+            <div class="step-item" id="ws_step4"></div>
+            <div class="step-item" id="ws_step5"></div>
+        </div>
+        <div class="step-labels">
+            <span id="ws_label1">Step1 商品图</span><span id="ws_label2">Step2 平铺图</span><span id="ws_label3">Step3 橱窗图</span><span id="ws_label4">Step4 模仿视频</span><span id="ws_label5">Step5 动作迁移</span>
+        </div>
+        <div id="retryBtn" style="display:none;margin-top:8px;">
+            <button class="retry-btn" onclick="retryFailed()">↻ 从失败步骤重试</button>
+        </div>
+
+        <div id="inputInfoPanel" style="display:none;margin-top:12px;background:#1e1e36;border-radius:8px;padding:12px;font-size:.8em;border:1px solid #2a2a4a;">
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">📥 输入信息</div>
+            <div style="margin-bottom:6px;color:#888;"><span style="color:#6b7280;">商品链接：</span><a id="infoProductUrl" href="#" target="_blank" style="color:#7dd3fc;word-break:break-all;text-decoration:none;"></a></div>
+            <div style="color:#888;"><span style="color:#6b7280;">模仿视频：</span><a id="infoVideoUrl" href="#" target="_blank" style="color:#7dd3fc;word-break:break-all;text-decoration:none;"></a></div>
+        </div>
+
+        <div class="preview-grid" id="previewGrid">
+            <div class="preview-item placeholder"><span style="font-size:2em;opacity:.3;">📦</span><div class="label">原始商品图</div></div>
+            <div class="preview-item placeholder"><span style="font-size:2em;opacity:.3;">👕</span><div class="label">白底平铺图</div></div>
+            <div class="preview-item placeholder"><span style="font-size:2em;opacity:.3;">🖼️</span><div class="label">橱窗展示图</div></div>
+            <div class="preview-item placeholder"><span style="font-size:2em;opacity:.3;">🎬</span><div class="label">模仿视频</div></div>
+        </div>
+
+        <div class="video-publish-row">
+            <div class="video-col">
+                <div class="video-result" id="resultSection" style="display:none;">
+                    <h3>🎬 最终视频</h3>
+                    <video class="video-player" id="resultVideo" controls loop></video>
+                    <div class="result-links" id="resultLinks"></div>
+                </div>
+
+                <div class="video-placeholder" id="videoPlaceholder">
+                    <div class="ph-icon">🎬</div>
+                    <div>输入商品链接和模仿视频链接，开始生成</div>
+                </div>
+            </div>
+
+            <!-- 抖音发布工作台 -->
+            <div class="publish-col">
+                <h3>📤 抖音发布工作台</h3>
+
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button class="publish-login-btn" id="publishLoginBtn" onclick="publishLogin()">扫码登录抖音</button>
+                    <span id="publishLoginStatus" style="font-size:.78em;color:#888;">未检测登录态</span>
+                </div>
+
+                <div class="input-group">
+                    <label>视频路径</label>
+                    <input type="text" id="publishVideoPath" placeholder="生成后自动填充，也可手动粘贴">
+                </div>
+
+                <div class="input-group">
+                    <label>标题/描述</label>
+                    <textarea id="publishTitle" placeholder="视频标题和描述..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>标签（逗号分隔）</label>
+                    <input type="text" id="publishTags" placeholder="女装,穿搭,童装">
+                </div>
+
+                <button class="publish-run-btn" id="publishRunBtn" onclick="publishToDouyinStep()">启动分步发布（走一步停一步）</button>
+
+                <!-- 分步发布进度区 -->
+                <div id="publishStepsPanel" style="display:none;background:#1e1e36;border-radius:8px;padding:14px;font-size:.82em;">
+                    <div style="margin-bottom:10px;color:#a5a5c8;font-weight:600;">📋 执行步骤</div>
+                    <div id="publishStepsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <button id="publishNextBtn" class="publish-run-btn" style="flex:1;padding:10px;font-size:.9em;background:linear-gradient(90deg,#10b981,#06b6d4);" onclick="publishSessionNext()">继续下一步 →</button>
+                        <button id="publishAbortBtn" style="padding:10px 14px;border:1px solid #5a3a3a;border-radius:8px;background:#3a1e1e;color:#fca5a5;cursor:pointer;font-size:.85em;" onclick="publishSessionAbort()">放弃</button>
+                    </div>
+                    <div id="publishSnapshotBox" style="display:none;background:#0e0e1e;border-radius:6px;padding:8px;margin-bottom:8px;">
+                        <div style="color:#888;font-size:.75em;margin-bottom:4px;">🔍 页面识别</div>
+                        <pre id="publishSnapshotText" style="color:#7dd3fc;font-size:.75em;white-space:pre-wrap;max-height:120px;overflow:auto;margin:0;"></pre>
+                        <img id="publishSnapshotImg" style="display:none;max-width:100%;margin-top:6px;border-radius:4px;" />
+                    </div>
+                    <div style="background:#0e0e1e;border-radius:6px;padding:8px;">
+                        <div style="color:#888;font-size:.75em;margin-bottom:4px;">📝 日志</div>
+                        <div id="publishLogList" style="color:#aaa;font-size:.78em;line-height:1.6;max-height:180px;overflow:auto;font-family:Consolas,monospace;"></div>
+                    </div>
+                </div>
+
+                <div class="publish-stage" id="publishStage" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新手引导弹窗 -->
+<div id="onboardOverlay" class="onboard-overlay" style="display:none;">
+    <div class="onboard-card">
+        <div class="onboard-title">🎬 欢迎使用动作迁移工作台</div>
+        <div class="onboard-sub">3 步上手，轻松把商品/模特变成带货视频</div>
+        <div class="onboard-steps">
+            <div class="onboard-step">
+                <div class="onboard-step-num">1</div>
+                <div class="onboard-step-text"><b>选模式</b>：有商品链接选「商品出片」；有现成模特图选「素材出片」</div>
+            </div>
+            <div class="onboard-step">
+                <div class="onboard-step-num">2</div>
+                <div class="onboard-step-text"><b>填内容</b>：粘贴抖音链接、上传模特图（背景图可选，不会填可点 ❓ 查看示例）</div>
+            </div>
+            <div class="onboard-step">
+                <div class="onboard-step-num">3</div>
+                <div class="onboard-step-text"><b>点「开始生成」</b>：等待 5-10 分钟出片，进度可实时查看，完成后可发布抖音</div>
+            </div>
+        </div>
+        <div class="onboard-actions">
+            <button class="onboard-btn onboard-btn-primary" onclick="loadExampleTask();closeOnboard();">🚀 载入示例任务</button>
+            <button class="onboard-btn onboard-btn-secondary" onclick="closeOnboard()">我知道了</button>
+        </div>
+        <div class="onboard-dismiss">
+            <label><input type="checkbox" id="onboardNeverShow"> 不再提示</label>
+        </div>
+    </div>
+</div>
+
+<!-- 首次启动引导弹窗（不可关闭；出现标准：RunningHub 登录 Cookie 已失效） -->
+<div id="firstRunOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;overflow:auto;">
+    <div style="max-width:680px;margin:48px auto 24px;background:#171730;border:1px solid #3a3a5c;border-radius:14px;padding:26px 30px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="font-size:1.15em;color:#e2e8f0;font-weight:700;">🎬 首次使用引导</div>
+            <div id="frStepIndicator" style="color:#888;font-size:.85em;">第 1 步 / 共 3 步</div>
+        </div>
+        <div style="color:#6b7280;font-size:.82em;margin-bottom:16px;">按顺序完成 3 步配置即可一键生成带货视频</div>
+
+        <!-- 第 1 页：注册/登录 RunningHub（Cookie 记录） -->
+        <div id="frStep1">
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">① 注册 / 登录 RunningHub 账号</div>
+            <div style="color:#888;font-size:.86em;line-height:1.8;margin-bottom:10px;">
+                RunningHub 是出片的算力平台（手机号 + 验证码免费注册，新用户送 RH 币）。点击下面按钮会打开注册页
+                （已自动带上官方邀请码），完成注册并登录即可；<b style="color:#93c5fd;">登录成功后本工具会自动记录登录 Cookie，无需再填账号密码</b>。
+            </div>
+            <div style="background:#1e1e36;border:1px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.82em;color:#888;">
+                注册链接（含官方邀请码）：
+                <a href="https://www.runninghub.cn?inviteCode=jgzvdb2g" target="_blank" rel="noopener" style="color:#60a5fa;word-break:break-all;">https://www.runninghub.cn?inviteCode=jgzvdb2g</a>
+            </div>
+            <button id="frOpenRhBtn" onclick="frOpenRhLogin()" style="width:100%;padding:12px;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.98em;font-family:inherit;font-weight:600;">🌐 打开注册/登录页</button>
+            <div id="frRhStatus" style="margin:10px 0 14px;font-size:.86em;color:#888;">⚪ 未检测到 RunningHub 登录</div>
+            <button id="frNext1" onclick="frStep1Next()" disabled style="width:100%;padding:12px;background:#3a3a5c;color:#6b7280;border:none;border-radius:8px;cursor:not-allowed;font-size:.98em;font-family:inherit;">下一步（自动注入动作迁移工作流）</button>
+        </div>
+
+        <!-- 第 2 页：Agnes API Key -->
+        <div id="frStep2" style="display:none;">
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">② 注册 Agnes API Key（生图 / 视频模型）</div>
+            <div style="color:#888;font-size:.86em;line-height:1.8;margin-bottom:10px;">
+                Agnes 提供生图与视频生成模型（免费注册）。注册后进入控制台 → API Key 管理 → 创建并复制 Key，填到下面即可。
+                <a href="https://platform.agnes-ai.cn" target="_blank" rel="noopener" style="color:#fbbf24;font-weight:600;">前往注册 / 获取 API Key →</a>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <label style="color:#888;font-size:.85em;">API 地址（默认即可）
+                    <input id="frAgnesBaseUrl" value="https://api.agnes-ai.cn/v1" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                </label>
+                <div style="display:flex;gap:10px;">
+                    <label style="flex:1;color:#888;font-size:.85em;">生图模型（默认即可）
+                        <input id="frAgnesImageModel" value="agnes-image-2.5-flash" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                    </label>
+                    <label style="flex:1;color:#888;font-size:.85em;">视频 / LLM 模型（默认即可）
+                        <input id="frAgnesVisionModel" value="agnes-3.0-flash" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                    </label>
+                </div>
+                <label style="color:#888;font-size:.85em;">API Key（必填）
+                    <input id="frAgnesKey" type="password" autocomplete="new-password" placeholder="粘贴你注册的 Agnes API Key" oninput="frCheckAgnesKey()" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                </label>
+            </div>
+            <div id="frAgnesHint" style="color:#6b7280;font-size:.82em;margin:10px 0 14px;">填写 API Key 后「下一步」才会亮起</div>
+            <button id="frNext2" onclick="frStep2Next()" disabled style="width:100%;padding:12px;background:#3a3a5c;color:#6b7280;border:none;border-radius:8px;cursor:not-allowed;font-size:.98em;font-family:inherit;">下一步</button>
+        </div>
+
+        <!-- 第 3 页：载入示例 / 取消 -->
+        <div id="frStep3" style="display:none;">
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">③ 开始体验</div>
+            <div style="color:#888;font-size:.86em;line-height:1.8;margin-bottom:14px;">配置完成！可以直接载入示例任务一键体验完整流程，也可以点「取消」自己新建任务。</div>
+            <button onclick="frLoadExample()" style="width:100%;padding:12px;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.98em;font-family:inherit;font-weight:600;">🚀 载入示例任务（一键体验）</button>
+            <button onclick="frCancelGuide()" style="width:100%;padding:12px;margin-top:10px;background:#252544;color:#a5a5c8;border:1px solid #3a3a5c;border-radius:8px;cursor:pointer;font-size:.98em;font-family:inherit;">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 设置弹窗：ComfyUI 账号 / Agnes API -->
+<div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;overflow:auto;" onclick="if(event.target===this)closeSettings()">
+    <div style="max-width:720px;margin:56px auto;background:#171730;border:1px solid #3a3a5c;border-radius:12px;padding:20px 22px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div style="font-size:1.12em;color:#e2e8f0;font-weight:600;">⚙️ 设置</div>
+            <button onclick="closeSettings()" style="background:#3a3a5c;border:none;color:#a5a5c8;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1em;">×</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button id="setTabRh" onclick="switchSettingsTab('rh')" style="flex:1;padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.92em;font-family:inherit;">ComfyUI 账号</button>
+            <button id="setTabAgnes" onclick="switchSettingsTab('agnes')" style="flex:1;padding:10px;background:#1e1e36;color:#888;border:none;border-radius:8px;cursor:pointer;font-size:.92em;font-family:inherit;">Agnes API</button>
+        </div>
+
+        <!-- ComfyUI 账号池 -->
+        <div id="settingsPaneRh" style="display:block;">
+            <div style="margin-top:0;padding:12px 14px;background:#1e1e36;border-radius:10px;font-size:.78em;line-height:1.6;" id="rhAccountsPanel">
+                <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                    <span>ComfyUI 账号池</span>
+                    <div style="display:flex;gap:6px;">
+                        <button style="background:#3a3a5c;border:none;color:#a5a5c8;padding:4px 10px;border-radius:4px;font-size:.85em;cursor:pointer;" onclick="refreshRhAccounts()">刷新列表</button>
+                        <button style="background:#1e3a5c;border:none;color:#a5d4ff;padding:4px 10px;border-radius:4px;font-size:.85em;cursor:pointer;" onclick="refreshRhStatusAll()" id="btnRefreshStatus">实时校准</button>
+                    </div>
+                </div>
+
+                <!-- 添加新账号表单 -->
+                <div style="margin-top:6px;padding:8px;background:#252544;border-radius:6px;">
+                    <div style="color:#9ea0c8;font-size:.9em;margin-bottom:4px;">添加新账号</div>
+                    <div style="color:#6b7280;font-size:.8em;margin-bottom:6px;">提交后自动：①无头浏览器校验（登录态会保存，下次免登）→ ②上传动作迁移工作流 → ③更新状态</div>
+                    <div style="color:#6b7280;font-size:.8em;margin-bottom:6px;">还没有账号？<a href="https://www.runninghub.cn" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">点此注册 RunningHub 账号</a>（手机号+验证码免费注册，新用户送 RH 币）。注册后请在官网点右上角头像 →「账号设置」→ <b style="color:#93c5fd;">设置登录密码</b>，下面填的密码就是它——没设密码的账号无法自动登录。</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                        <input id="rhAddPhone" placeholder="手机号" style="flex:1;min-width:90px;background:#1a1a30;border:1px solid #333;border-radius:4px;padding:4px 8px;color:#ccc;font-size:.85em;">
+                        <input id="rhAddPassword" type="password" placeholder="密码" style="flex:1;min-width:90px;background:#1a1a30;border:1px solid #333;border-radius:4px;padding:4px 8px;color:#ccc;font-size:.85em;">
+                        <input id="rhAddNote" placeholder="备注（可选）" style="flex:1;min-width:120px;background:#1a1a30;border:1px solid #333;border-radius:4px;padding:4px 8px;color:#ccc;font-size:.85em;">
+                        <button id="rhAddBtn" style="background:#16a34a;border:none;color:#fff;padding:4px 10px;border-radius:4px;font-size:.85em;cursor:pointer;" onclick="addRhAccount()">+ 添加</button>
+                    </div>
+                    <div id="rhAddResult" style="margin-top:6px;"></div>
+                </div>
+
+                <div id="rhAccountsList" style="color:#888;margin-top:8px;">加载中...</div>
+            </div>
+        </div>
+
+        <!-- Agnes API 配置 -->
+        <div id="settingsPaneAgnes" style="display:none;">
+            <div style="padding:14px;background:#1e1e36;border-radius:10px;font-size:.85em;">
+                <div style="color:#a5a5c8;font-weight:600;margin-bottom:4px;">Agnes API 配置</div>
+                <div style="color:#6b7280;font-size:.9em;margin-bottom:6px;">同时作用于生图（Step1/2/3 参考图）与 LLM（模特判断/发布文案）。保存后即时生效，无需重启。</div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1e3a5c;border:1px solid #2d5a8c;border-radius:8px;margin-bottom:12px;font-size:.88em;">
+                    <span>💡</span>
+                    <div style="flex:1;color:#a5d4ff;line-height:1.6;">
+                        建议自行注册 Agnes 账号（免费），以免共用密钥触发并发限制。
+                        <a href="https://platform.agnes-ai.cn" target="_blank" rel="noopener" style="color:#fbbf24;font-weight:600;text-decoration:underline;margin-left:4px;">前往注册/获取 API Key（国内站）→</a>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <label style="color:#888;">API 地址
+                        <input id="agnesBaseUrl" placeholder="https://api.agnes-ai.cn/v1" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                    </label>
+                    <label style="color:#888;">API Key
+                        <input id="agnesApiKey" type="password" autocomplete="new-password" placeholder="留空保持现有 key 不变" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                        <div id="agnesKeyState" style="color:#6b7280;font-size:.85em;margin-top:4px;"></div>
+                    </label>
+                    <div style="display:flex;gap:10px;">
+                        <label style="flex:1;color:#888;">生图模型
+                            <input id="agnesImageModel" placeholder="agnes-image-2.5-flash" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                        </label>
+                        <label style="flex:1;color:#888;">视觉/LLM 模型
+                            <input id="agnesVisionModel" placeholder="agnes-3.0-flash" style="display:block;width:100%;margin-top:4px;background:#1a1a30;border:1px solid #333;border-radius:6px;padding:8px 10px;color:#ccc;font-size:1em;box-sizing:border-box;">
+                            <div style="color:#6b7280;font-size:.85em;margin-top:3px;">模特判断 + 发布文案均使用此模型</div>
+                        </label>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <button id="agnesSaveBtn" onclick="saveAgnesSettings()" style="background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;border:none;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:.95em;font-family:inherit;">保存配置</button>
+                        <button id="agnesTestBtn" onclick="testAgnesSettings()" style="background:#252544;color:#a5d4ff;border:1px solid #2d5a8c;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:.95em;font-family:inherit;">测通</button>
+                        <span id="agnesSaveResult" style="color:#888;font-size:.9em;"></span>
+                    </div>
+                    <div id="agnesTestResult" style="white-space:pre-wrap;font-size:.9em;color:#888;line-height:1.7;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 会话主人：DSH 右栏把这台嵌成 iframe 时带 ?session=<会话id>。
+// 有了它，历史/成片按这条会话过滤（"谁点的谁看自己的"）并写进任务档案。
+// ⚠️ 2026-10-10 起服务端不再拿它校验花钱批准条子（这一端是人自己点的）；agent 那条轨的条子在网关里消费，与本页无关。
+// 直接在浏览器打开本页（没有 ?session=）时全部退回旧行为：看全局历史。
+const DSH_SESSION = new URLSearchParams(location.search).get('session') || '';
+let currentTaskId = null;
+let pollTimer = null;
+let pollGeneration = 0;
+let pollFailCount = 0;
+let lastTerminalLogged = '';
+let lastPreviewSignature = '';
+let lastShownVideoUrl = '';
+let lastStage = '';
+let rpaWaitStarted = 0;
+
+function setCurrentTask(tid) {
+    currentTaskId = tid || null;
+    try {
+        if (tid) localStorage.setItem('ws_current_task', tid);
+        else localStorage.removeItem('ws_current_task');
+    } catch (e) {}
+}
+
+async function fetchWithTimeout(url, options, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms || 10000);
+    try {
+        return await fetch(url, Object.assign({}, options || {}, {signal: ctrl.signal}));
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function stopPolling() {
+    pollGeneration += 1;
+    if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+    }
+}
+
+function finalVideoUrl(tid, data) {
+    const outs = (data && data.outputs) || [];
+    const fromOut = (outs.find(o => o.fileType === 'mp4') || outs[0] || {}).fileUrl || '';
+    return fromOut || (data && data.final_video_url) || (tid ? ('/outputs/womenswear_studio/' + tid + '/final.mp4') : '');
+}
+
+async function tryShowFinalVideo(tid, data) {
+    const url = finalVideoUrl(tid, data || {});
+    if (!url) return false;
+    try {
+        const r = await fetch(url, {method: 'HEAD'});
+        if (!r.ok) return false;
+        showResult({outputs: [{fileUrl: url, fileType: 'mp4'}]});
+        addLog('已回传成片', 'done');
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function restoreWorkspace() {
+    const params = new URLSearchParams(window.location.search);
+    let tid = params.get('task_id') || '';
+    try { tid = tid || localStorage.getItem('ws_current_task') || ''; } catch (e) {}
+    if (tid) setCurrentTask(tid);
+    await loadHistory();
+    if (!currentTaskId) return;
+    addLog('刷新后恢复任务: ' + currentTaskId, 'running');
+    try {
+        const ok = await loadTaskDetail(currentTaskId);
+        if (!ok) {
+            // 任务在后端不存在（历史记录不随安装包分发）：解绑回初始态，别停在坏任务上
+            setCurrentTask('');
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('task_id');
+                history.replaceState(null, '', url.pathname + url.search);
+            } catch (e) {}
+            addLog('上次任务已不存在（历史记录不随安装包保留），已重置；可点「载入示例任务」或新建任务', 'error');
+            return;
+        }
+        const stRes = await fetchWithTimeout('/api/womenswear-studio/status?task_id=' + encodeURIComponent(currentTaskId), {}, 8000);
+        const st = await stRes.json();
+        updateUI(st);
+        await tryShowFinalVideo(currentTaskId, st);
+        if (st.status === 'RUNNING' || st.status === 'INIT') {
+            const btn = document.getElementById('runBtn');
+            btn.disabled = true;
+            btn.classList.add('running');
+            btn.textContent = '监控中...';
+            startPolling();
+        }
+    } catch (e) {
+        addLog('恢复任务失败: ' + e.message, 'error');
+        await tryShowFinalVideo(currentTaskId);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    restoreWorkspace();
+    refreshRhAccounts();
+    checkPublishLogin();
+    initFirstRunGuide();  // RunningHub Cookie 失效时弹三页引导（不可关闭）
+    setInterval(initFirstRunGuide, 30000);  // Cookie 看门狗：中途失效自动回到三步引导
+});  // 闭合 window.addEventListener('DOMContentLoaded', ...)
+
+// 检查抖音登录态（页面加载时自动调用）
+async function checkPublishLogin() {
+    const btn = document.getElementById('publishLoginBtn');
+    const status = document.getElementById('publishLoginStatus');
+    btn.disabled = true;
+    status.innerHTML = '<span class="publish-spinner"></span>检查登录态...';
+    try {
+        const res = await fetch('/api/publish/check-login');
+        const data = await res.json();
+        if (data.logged_in) {
+            btn.textContent = '重新登录';
+            const nick = data.nickname ? '（' + data.nickname + '）' : '';
+            status.innerHTML = '✅ 已保存登录态' + nick + '<br><span style="font-size:.75em;color:#999;">实际有效性在发布时验证</span>';
+        } else {
+            btn.textContent = '扫码登录抖音';
+            status.textContent = data.message || '未检测登录态';
+        }
+    } catch (e) {
+        btn.textContent = '扫码登录抖音';
+        status.textContent = '登录态检查失败';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function addLog(msg, type='') {
+    const box = document.getElementById('logBox');
+    if (!box) return;
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    const t = new Date().toLocaleTimeString('zh-CN', {hour12:false});
+    line.textContent = `[${t}] ${msg}`;
+    box.appendChild(line);
+    while (box.children.length > 300) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
+}
+
+function setBadge(status) {
+    const badge = document.getElementById('statusBadge');
+    const map = {
+        'INIT': ['badge-idle', '初始化'],
+        'RUNNING': ['badge-running', '运行中'],
+        'SUCCESS': ['badge-completed', '已完成'],
+        'FAILED': ['badge-failed', '失败'],
+    };
+    const [cls, txt] = map[status] || ['badge-idle', status];
+    badge.className = 'status-badge ' + cls;
+    badge.textContent = txt;
+}
+
+// ───── Tab 切换 ─────
+// FR-3 旧值兼容：link→product，upload/beauty→creator
+function normalizeSourceMode(mode) {
+    const m = (mode || 'product').toLowerCase();
+    return ({ link: 'product', upload: 'creator', beauty: 'creator' })[m] || m;
+}
+function getCurrentSourceMode() {
+    return document.querySelector('.source-tab.active')?.dataset.source || 'product';
+}
+function getCurrentEngine() {
+    // 引擎固定为 Plus（前端不再提供选项，后端默认 plus）
+    return 'plus';
+}
+function switchSourceTab(mode) {
+    mode = normalizeSourceMode(mode);
+    console.log('[switchSourceTab] mode=', mode);
+    document.querySelectorAll('.source-tab').forEach(t => t.classList.toggle('active', t.dataset.source === mode));
+    document.querySelectorAll('.upload-section').forEach(s => s.classList.remove('active'));
+    const sec = document.getElementById(mode + 'Section');
+    console.log('[switchSourceTab] section=', sec ? sec.id : 'NOT FOUND');
+    if (sec) sec.classList.add('active');
+    // 同步切换流程说明
+    const desc = document.getElementById('flowDesc');
+    if (!desc) return;
+    if (mode === 'product') {
+        desc.innerHTML = `
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">流程说明（商品出片）</div>
+            1. 解析商品链接 → 下载原始商品图<br>
+            2. Agnes 生成 3:4 白底平铺图<br>
+            3. Agnes 用模特图生成 9:16 动作迁移参考图<br>
+            <span style="color:#6b7280;">　（背景图可选，上传则模特背景融合+模仿视频融合 / 缺省下载模仿视频截帧作背景、替换模特人物）</span><br>
+            4. 下载抖音模仿视频<br>
+            5. 动作迁移（RPA 出片）<br>
+            6. 下载结果视频`;
+    } else {
+        desc.innerHTML = `
+            <div style="color:#a5a5c8;font-weight:600;margin-bottom:8px;">流程说明（素材出片）</div>
+            1. 使用上传的模特图（兼作服装真值；仅服装→默认模特兜底）<br>
+            2. 跳过白底平铺图生成<br>
+            3. Agnes 融合生成 9:16 动作迁移参考图<br>
+            <span style="color:#6b7280;">　（背景图可选，缺省抽模仿视频关键帧作背景）</span><br>
+            4. 使用上传的模仿视频（跳过下载）<br>
+            5. 动作迁移（RPA 出片）<br>
+            6. 下载结果视频`;
+    }
+}
+
+// ───── 设置弹窗（ComfyUI 账号 / Agnes API） ─────
+function openSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (overlay) overlay.style.display = 'block';
+    loadAgnesSettings();
+    refreshRhAccounts();
+}
+function closeSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+function switchSettingsTab(tab) {
+    const isRh = tab === 'rh';
+    const rhBtn = document.getElementById('setTabRh');
+    const agnesBtn = document.getElementById('setTabAgnes');
+    rhBtn.style.background = isRh ? '#0ea5e9' : '#1e1e36';
+    rhBtn.style.color = isRh ? '#fff' : '#888';
+    agnesBtn.style.background = isRh ? '#1e1e36' : '#0ea5e9';
+    agnesBtn.style.color = isRh ? '#888' : '#fff';
+    document.getElementById('settingsPaneRh').style.display = isRh ? 'block' : 'none';
+    document.getElementById('settingsPaneAgnes').style.display = isRh ? 'none' : 'block';
+}
+async function loadAgnesSettings() {
+    try {
+        const r = await fetch('/api/settings/agnes');
+        const d = await r.json();
+        if (!d.success) return;
+        document.getElementById('agnesBaseUrl').value = d.base_url || '';
+        document.getElementById('agnesImageModel').value = d.image_model || '';
+        document.getElementById('agnesVisionModel').value = d.vision_model || '';
+        document.getElementById('agnesKeyState').textContent = d.api_key_set
+            ? ('当前 Key: ' + (d.api_key_masked || '已配置') + ' · 留空保持不变')
+            : '尚未配置 Key';
+        const inp = document.getElementById('agnesApiKey');
+        inp.value = '';
+        inp.placeholder = d.api_key_set ? '留空保持现有 key 不变' : '请输入 API Key';
+    } catch (e) {
+        const el = document.getElementById('agnesSaveResult');
+        if (el) el.textContent = '读取失败: ' + e.message;
+    }
+}
+async function saveAgnesSettings() {
+    const btn = document.getElementById('agnesSaveBtn');
+    const result = document.getElementById('agnesSaveResult');
+    btn.disabled = true;
+    result.textContent = '保存中...';
+    try {
+        const res = await fetch('/api/settings/agnes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                base_url: document.getElementById('agnesBaseUrl').value.trim(),
+                api_key: document.getElementById('agnesApiKey').value.trim(),
+                image_model: document.getElementById('agnesImageModel').value.trim(),
+                vision_model: document.getElementById('agnesVisionModel').value.trim(),
+            }),
+        });
+        const d = await res.json();
+        if (d.success) {
+            result.textContent = '✅ ' + (d.message || '已保存');
+            loadAgnesSettings();
+        } else {
+            let msg = d.detail || '保存失败';
+            if (Array.isArray(msg)) msg = msg.map(e => (e.loc ? e.loc.join('.') + ': ' : '') + (e.msg || '')).join('; ');
+            result.textContent = '❌ ' + msg;
+        }
+    } catch (e) {
+        result.textContent = '❌ ' + e.message;
+    } finally {
+        btn.disabled = false;
+    }
+}
+async function testAgnesSettings() {
+    const btn = document.getElementById('agnesTestBtn');
+    const result = document.getElementById('agnesTestResult');
+    btn.disabled = true;
+    result.style.color = '#888';
+    result.textContent = '测通中：① 视觉模型 ② 生图模型（生图约 20~60 秒）...';
+    try {
+        const res = await fetch('/api/settings/agnes/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                base_url: document.getElementById('agnesBaseUrl').value.trim(),
+                api_key: document.getElementById('agnesApiKey').value.trim(),
+                image_model: document.getElementById('agnesImageModel').value.trim(),
+                vision_model: document.getElementById('agnesVisionModel').value.trim(),
+            }),
+        });
+        const d = await res.json();
+        if (!res.ok || d.detail) {
+            let msg = d.detail || ('HTTP ' + res.status);
+            if (Array.isArray(msg)) msg = msg.map(e => (e.loc ? e.loc.join('.') + ': ' : '') + (e.msg || '')).join('; ');
+            result.style.color = '#f87171';
+            result.textContent = '❌ ' + msg;
+            return;
+        }
+        const line = (name, r) => (r && r.ok ? '✅ ' : '❌ ') + name + (r && r.ok
+            ? (' 连通 · ' + r.ms + 'ms')
+            : (' 失败 · ' + ((r && r.detail) || '未知错误')));
+        result.textContent = line('视觉/LLM 模型', d.chat) + '\n' + line('生图模型', d.image);
+        result.style.color = d.success ? '#22c55e' : '#f87171';
+    } catch (e) {
+        result.style.color = '#f87171';
+        result.textContent = '❌ ' + e.message;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ───── 上传状态 ─────
+const uploadState = {
+    rawProduct: { path: '', name: '', url: '' },      // 素材出片：模特图（兼服装真值）
+    sourceVideo: { path: '', name: '', url: '' },     // 素材出片：模仿视频
+    sceneImage: { path: '', name: '', url: '' },      // 素材出片：背景图（可选）
+    linkModelImage: { path: '', name: '', url: '' },  // 商品出片：模特图（必填）
+    productSceneImage: { path: '', name: '', url: '' }, // 商品出片：背景图（可选）
+};
+
+// ───── 上传逻辑（图片/视频） ─────
+function bindUpload(inputId, cardId, stateKey, type) {
+    document.getElementById(inputId).addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+        const card = document.getElementById(cardId);
+        const fn = document.getElementById(cardId.replace('Card', 'Filename'));
+        fn.textContent = file.name;
+        card.classList.add('has-file');
+        // 预览
+        const oldPrev = card.querySelector('.preview-img, .preview-video');
+        if (oldPrev) oldPrev.remove();
+        const previewUrl = URL.createObjectURL(file);
+        if (type === 'image') {
+            const img = document.createElement('img');
+            img.className = 'preview-img';
+            img.src = previewUrl;
+            card.appendChild(img);
+        } else {
+            const vid = document.createElement('video');
+            vid.className = 'preview-video';
+            vid.src = previewUrl;
+            vid.muted = true;
+            card.appendChild(vid);
+        }
+        // 上传到服务端
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const endpoint = type === 'image' ? '/api/upload/image' : '/api/upload/video';
+            const res = await fetch(endpoint, { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.success) {
+                uploadState[stateKey] = { path: data.file_path, name: file.name, url: previewUrl };
+                fn.textContent = file.name + ' ✓';
+            } else {
+                alert('上传失败');
+                clearUpload(stateKey);
+            }
+        } catch (err) {
+            alert('上传出错: ' + err.message);
+            clearUpload(stateKey);
+        }
+    });
+}
+bindUpload('rawProductInput', 'rawProductCard', 'rawProduct', 'image');
+bindUpload('linkModelImageInput', 'linkModelImageCard', 'linkModelImage', 'image');
+bindUpload('sourceVideoInput', 'sourceVideoCard', 'sourceVideo', 'video');
+bindUpload('sceneImageInput', 'sceneImageCard', 'sceneImage', 'image');
+bindUpload('productSceneImageInput', 'productSceneImageCard', 'productSceneImage', 'image');
+
+function clearUpload(stateKey, event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    const cardIdMap = {
+        rawProduct: 'rawProductCard', linkModelImage: 'linkModelImageCard', sourceVideo: 'sourceVideoCard', sceneImage: 'sceneImageCard', productSceneImage: 'productSceneImageCard',
+    };
+    const inputIdMap = {
+        rawProduct: 'rawProductInput', linkModelImage: 'linkModelImageInput', sourceVideo: 'sourceVideoInput', sceneImage: 'sceneImageInput', productSceneImage: 'productSceneImageInput',
+    };
+    const fnIdMap = {
+        rawProduct: 'rawProductFilename', linkModelImage: 'linkModelImageFilename', sourceVideo: 'sourceVideoFilename', sceneImage: 'sceneImageFilename', productSceneImage: 'productSceneImageFilename',
+    };
+    const card = document.getElementById(cardIdMap[stateKey]);
+    const fn = document.getElementById(fnIdMap[stateKey]);
+    const oldPrev = card.querySelector('.preview-img, .preview-video');
+    if (oldPrev) oldPrev.remove();
+    if (uploadState[stateKey].url) URL.revokeObjectURL(uploadState[stateKey].url);
+    uploadState[stateKey] = { path: '', name: '', url: '' };
+    card.classList.remove('has-file');
+    fn.textContent = '';
+    document.getElementById(inputIdMap[stateKey]).value = '';
+}
+
+// ───── 新建任务：解除任务绑定 + 清空表单与输出区 ─────
+function newTask() {
+    if (currentTaskId && document.getElementById('runBtn').disabled) {
+        if (!confirm('当前任务仍在运行，新建任务只会断开监控（任务继续在后台跑）。\n确定要新建吗？')) return;
+    }
+    // 1. 解除任务绑定（URL ?task_id= 与 localStorage 均清掉，刷新不再回填旧任务）
+    stopPolling();
+    setCurrentTask('');
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('task_id');
+        history.replaceState(null, '', url.pathname + url.search);
+    } catch (e) {}
+
+    // 2. 清空表单输入
+    const pUrl = document.getElementById('productUrl');
+    if (pUrl) pUrl.value = '';
+    const vUrl = document.getElementById('videoUrl');
+    if (vUrl) vUrl.value = '';
+    ['rawProduct', 'sourceVideo', 'sceneImage', 'linkModelImage', 'productSceneImage'].forEach(k => clearUpload(k));
+
+    // 3. 重置选项（商品出片）
+    switchSourceTab('product');
+
+    // 4. 重置输出区
+    lastTerminalLogged = '';
+    lastPreviewSignature = '';
+    lastShownVideoUrl = '';
+    rpaWaitStarted = 0;
+    lastStage = '';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('videoPlaceholder').style.display = 'flex';
+    document.getElementById('logBox').innerHTML = '';
+    document.getElementById('progressFill').style.width = '0%';
+    const pctReset = document.getElementById('progressPct');
+    if (pctReset) pctReset.textContent = '0%';
+    showSseError('');
+    resetPreviews();
+    updateStepsBar('', 'INIT');
+    setBadge('INIT');
+    document.getElementById('stageText').textContent = '请输入链接并点击"开始生成"';
+    const rhInfo = document.getElementById('rhInfo');
+    if (rhInfo) rhInfo.textContent = '';
+    const infoPanel = document.getElementById('inputInfoPanel');
+    if (infoPanel) infoPanel.style.display = 'none';
+
+    // 5. 重置按钮状态
+    const btn = document.getElementById('runBtn');
+    btn.disabled = false;
+    btn.classList.remove('running');
+    btn.textContent = '开始生成';
+    const abortBtn = document.getElementById('abortRunBtn');
+    if (abortBtn) abortBtn.style.display = 'none';
+    const retryBtn = document.getElementById('retryRunBtn');
+    if (retryBtn) retryBtn.style.display = 'none';
+
+    addLog('已新建空白任务：填写参数后点击「开始生成」即可（每次生成都会创建独立任务，旧任务保留在历史列表）', 'done');
+}
+
+async function runPipeline() {
+    const sourceMode = getCurrentSourceMode();
+    const engine = getCurrentEngine();
+    addLog('Step5 引擎: 🚀 Plus（质量优先）+ RPA 浏览器', 'running');
+
+    // 构造 payload（按模式卡片不同）
+    let payload = { engine };
+    if (sourceMode === 'product') {
+        const productUrl = document.getElementById('productUrl').value.trim();
+        const videoUrl = document.getElementById('videoUrl').value.trim();
+        if (!productUrl) { alert('请输入商品链接'); return; }
+        if (!videoUrl) { alert('请输入模仿视频链接'); return; }
+        if (!uploadState.linkModelImage.path) { alert('请上传模特图'); return; }
+        Object.assign(payload, {
+            source_mode: 'product',
+            product_url: productUrl,
+            video_url: videoUrl,
+            model_image_path: uploadState.linkModelImage.path,
+            scene_image_path: uploadState.productSceneImage.path || '',
+        });
+        addLog('提交任务（商品出片，模特图，' + (uploadState.productSceneImage.path ? '模特背景融合+模仿视频融合' : '下载模仿视频截帧作背景、替换模特人物') + '）', 'running');
+    } else {
+        // creator 素材出片
+        if (!uploadState.rawProduct.path) { alert('请上传模特图'); return; }
+        if (!uploadState.sourceVideo.path) { alert('请上传模仿视频'); return; }
+        Object.assign(payload, {
+            source_mode: 'creator',
+            raw_product_path: uploadState.rawProduct.path,
+            source_video_path: uploadState.sourceVideo.path,
+            scene_image_path: uploadState.sceneImage.path || '',
+        });
+        addLog('提交任务（素材出片，' +
+            (uploadState.sceneImage.path ? '上传背景图融合' : '抽模仿视频关键帧作背景') + '，' +
+            '模特图自动识别' + '）', 'running');
+    }
+    console.log('[runPipeline] sourceMode=', sourceMode, 'engine=', engine, 'payload=', payload);
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.classList.add('running');
+    btn.textContent = '生成中...';
+
+    lastTerminalLogged = '';
+    lastPreviewSignature = '';
+    lastShownVideoUrl = '';
+    rpaWaitStarted = 0;
+    lastStage = '';
+    stopPolling();
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('videoPlaceholder').style.display = 'flex';
+    document.getElementById('logBox').innerHTML = '';
+    document.getElementById('progressFill').style.width = '0%';
+    const pctReset = document.getElementById('progressPct');
+    if (pctReset) pctReset.textContent = '0%';
+    showSseError('');
+    resetPreviews();
+    setBadge('INIT');
+    document.getElementById('stageText').textContent = '提交任务中...';
+    document.getElementById('rhInfo').textContent = '';
+    // 带上会话主人：写进任务档案，历史/成片按它过滤（服务端已不再用它校验批准条子，2026-10-10）
+    payload.session = DSH_SESSION;
+
+    try {
+        const res = await fetch('/api/womenswear-studio/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) {
+            // FastAPI 422: detail 是数组 [{type,loc,msg,...}]；HTTPException 400: detail 是字符串
+            let errMsg = data.detail || '未知错误';
+            if (Array.isArray(errMsg)) {
+                errMsg = errMsg.map(e => (e.loc ? e.loc.join('.') + ': ' : '') + (e.msg || '')).join('; ');
+            } else if (typeof errMsg === 'object') {
+                errMsg = JSON.stringify(errMsg);
+            }
+            addLog('提交失败: ' + errMsg, 'error');
+            setBadge('FAILED');
+            document.getElementById('stageText').textContent = '提交失败';
+            btn.disabled = false;
+            btn.classList.remove('running');
+            btn.textContent = '开始生成';
+            return;
+        }
+        setCurrentTask(data.task_id);
+        addLog('任务已提交: ' + currentTaskId, 'done');
+        const abortBtn = document.getElementById('abortRunBtn');
+        if (abortBtn) {
+            abortBtn.style.display = 'block';
+            abortBtn.disabled = false;
+            abortBtn.textContent = '⛔ 中止任务';
+        }
+        startPolling();
+    } catch (e) {
+        addLog('提交异常: ' + e.message, 'error');
+        setBadge('FAILED');
+        btn.disabled = false;
+        btn.classList.remove('running');
+        btn.textContent = '开始生成';
+    }
+}
+
+function resetPreviews() {
+    // 商品出片两分支都抽帧（5格）；素材出片不传背景图才抽帧（5格 / 传场景图=4格）
+    const sourceMode = getCurrentSourceMode();
+    const isDrama = sourceMode === 'product' || !uploadState.sceneImage.path;
+    window._previewCounts = {};  // 清空增量日志计数
+    lastPreviewSignature = '';
+    const grid = document.getElementById('previewGrid');
+    if (grid) grid.dataset.slots = '';
+    // 素材出片跳过平铺图格：合成 step2 skipped 中间态
+    const intermediate = sourceMode === 'creator' ? { step2: { output: { skipped: true } } } : {};
+    renderPreviewGrid({rawUrl:'', flatUrl:'', showUrl:'', srcVideo:'', keyframeUrl:'', isDrama, intermediate});
+}
+
+// 手机号脱敏：显示打星号（180****166），DOM/弹窗均不暴露明文
+let _rhPhones = [];
+function maskPhone(p) {
+    p = String(p || '');
+    if (p.length < 7) return p ? '****' : '';
+    return p.slice(0, 3) + '****' + p.slice(-3);
+}
+function maskPhonesIn(s) {
+    return String(s == null ? '' : s).replace(/\b\d{11}\b/g, m => maskPhone(m));
+}
+function rhPhone(ref) {
+    return (typeof ref === 'number') ? (_rhPhones[ref] || '') : ref;
+}
+
+async function refreshRhAccounts() {
+    const listEl = document.getElementById('rhAccountsList');
+    if (!listEl) return;
+    try {
+        const r = await fetch('/api/rh-accounts/list');
+        const d = await r.json();
+        if (!d.success || !d.accounts || d.accounts.length === 0) {
+            listEl.innerHTML = '<span style="color:#6b7280;">无账号配置</span>';
+            return;
+        }
+        _rhPhones = d.accounts.map(a => a.phone);
+        // 综合展示状态（基于 ui_status 字段，后端已综合判断）
+        const statusColor = {
+            ready: '#10b981',
+            in_use: '#f59e0b',
+            no_workflow: '#a855f7',
+            pending: '#3b82f6',
+            login_failed: '#ef4444',
+            login_locked: '#f59e0b',
+            limited: '#ef4444',
+            disabled: '#6b7280',
+        };
+        const statusLabel = {
+            ready: '✅ 空闲',
+            in_use: '🟡 使用中',
+            no_workflow: '🟣 未上传',
+            pending: '🔵 待登录',
+            login_failed: '❌ 账号密码错误',
+            login_locked: '🔒 登录锁定',
+            limited: '❌ 被限流',
+            disabled: '⏸️ 已禁用',
+        };
+        const html = d.accounts.map((a, idx) => {
+            const ui = a.ui_status || a.status;
+            const sc = statusColor[ui] || '#6b7280';
+            const sl = statusLabel[ui] || a.status;
+            const lastLogin = a.last_login_ts ? new Date(a.last_login_ts * 1000).toLocaleString('zh-CN', {hour12: false}) : '—';
+            const lastUsed = a.last_used_ts ? new Date(a.last_used_ts * 1000).toLocaleString('zh-CN', {hour12: false}) : '—';
+            const note = a.note ? `<span style="color:#6b7280;font-size:.85em;"> ${maskPhonesIn(a.note)}</span>` : '';
+            const errLine = a.last_error ? `<div style="color:#ef4444;font-size:.85em;margin-top:2px;">错误: ${maskPhonesIn(a.last_error)}</div>` : '';
+
+            // 工作流私有副本（copy_workflow 结果；公共 get_workflow_json 不能当归属）
+            const wfTag = a.wf_exists && a.runtime_wf_id
+                ? `<span style="color:#10b981;">工作流副本: ${a.runtime_wf_id}</span>`
+                : (a.runtime_ts > 0
+                    ? `<span style="color:#a855f7;">工作流副本: 未上传</span>`
+                    : `<span style="color:#6b7280;">工作流副本: 未检测</span>`);
+
+            // 余额 / 并发 / 运行任务（仅在校准后显示）
+            let runtimeInfo = '';
+            if (a.runtime_ts > 0) {
+                const bal = (a.runtime_balance !== undefined && a.runtime_balance !== null && String(a.runtime_balance) !== '')
+                    ? `余额 ${a.runtime_balance}` : '余额 —';
+                const conc = `并发 ${a.runtime_concurrent_limit || 0}`;
+                const task = `运行任务 ${a.runtime_task_counts || 0}`;
+                runtimeInfo = `<div style="color:#9ca3af;font-size:.85em;margin-top:2px;">${bal} | ${conc} | ${task}</div>`;
+            }
+
+            // 操作按钮：校准 + 上传工作流 + 重置 + 删除
+            const needSetup = !a.last_login_ok || !a.wf_exists || ui === 'pending' || ui === 'login_failed' || ui === 'login_locked' || ui === 'no_workflow';
+            const setupBtn = needSetup
+                ? `<button style="background:#1e3a5c;border:none;color:#fde68a;padding:2px 8px;border-radius:3px;font-size:.8em;cursor:pointer;" onclick="setupRhAccount(${idx})">完成初始化</button>`
+                : '';
+            const actions = `
+                <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+                    ${setupBtn}
+                    <button style="background:#1e3a5c;border:none;color:#a5d4ff;padding:2px 8px;border-radius:3px;font-size:.8em;cursor:pointer;" onclick="refreshRhStatusOne(${idx})">校准</button>
+                    <button style="background:#14532d;border:none;color:#86efac;padding:2px 8px;border-radius:3px;font-size:.8em;cursor:pointer;" onclick="uploadRhWorkflow(${idx})">上传工作流</button>
+                    <button style="background:#3a3a5c;border:none;color:#a5a5c8;padding:2px 8px;border-radius:3px;font-size:.8em;cursor:pointer;" onclick="resetRhAccount(${idx})">重置</button>
+                    <button style="background:#5c1e1e;border:none;color:#ffb4b4;padding:2px 8px;border-radius:3px;font-size:.8em;cursor:pointer;" onclick="deleteRhAccount(${idx})">删除</button>
+                </div>
+            `;
+
+            return `
+                <div style="padding:8px 0;border-bottom:1px solid #2a2a3d;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="color:#ccc;">${maskPhone(a.phone)}${note}</span>
+                        <span style="color:${sc};font-weight:600;">${sl}</span>
+                    </div>
+                    <div style="color:#6b7280;font-size:.85em;margin-top:2px;">
+                        登录: ${lastLogin} | 上次使用: ${lastUsed} | 失败: ${a.fail_count}
+                    </div>
+                    <div style="color:#6b7280;font-size:.85em;margin-top:2px;">
+                        ${wfTag}
+                    </div>
+                    ${runtimeInfo}
+                    ${errLine}
+                    ${actions}
+                </div>
+            `;
+        }).join('');
+        listEl.innerHTML = html;
+    } catch (e) {
+        listEl.innerHTML = '<span style="color:#ef4444;">加载失败: ' + e.message + '</span>';
+    }
+}
+
+function renderRhSetupResult(d) {
+    const el = document.getElementById('rhAddResult');
+    if (!el) return;
+    const steps = d.steps || {};
+    const v = steps.verify || {};
+    const u = steps.upload || {};
+    const s = steps.status || {};
+    const icon = (ok, pending) => pending ? '○' : (ok ? '✅' : '❌');
+    const vPending = false;
+    const uPending = !v.success;
+    const sPending = !v.success || !u.success;
+    const vText = v.success
+        ? (v.reused_token ? '通过（复用登录态，无需重新登录）' : (v.via_browser ? '通过（无头浏览器已登录并保存）' : '通过'))
+        : (v.error || '');
+    let uText = '未执行';
+    if (v.success) {
+        uText = u.success
+            ? ((u.skipped ? '已有副本 ' : '已复制 ') + (u.runtime_wf_id || ''))
+            : (u.error || '失败');
+    }
+    let sText = '未执行';
+    if (v.success && u.success) {
+        sText = s.success ? '已更新' : (s.error || '刷新失败');
+    }
+    const ok = !!d.setup_ok;
+    el.innerHTML = `
+        <div style="padding:8px;background:#1a1a30;border-radius:6px;color:#ccc;line-height:1.7;">
+            <div>${icon(v.success, vPending)} 1. 校验账号密码：${vText}</div>
+            <div>${icon(u.success, uPending)} 2. 上传动作迁移工作流：${uText}</div>
+            <div>${icon(s.success, sPending)} 3. 更新状态：${sText}</div>
+            <div style="margin-top:4px;color:${ok ? '#86efac' : '#fca5a5'}">${maskPhonesIn(d.message || '')}</div>
+        </div>
+    `;
+}
+
+async function addRhAccount() {
+    const phone = (document.getElementById('rhAddPhone').value || '').trim();
+    const password = (document.getElementById('rhAddPassword').value || '').trim();
+    const note = (document.getElementById('rhAddNote').value || '').trim();
+    const btn = document.getElementById('rhAddBtn');
+    if (!phone || !password) {
+        alert('请填写手机号和密码');
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = '初始化中...'; }
+    const resultEl = document.getElementById('rhAddResult');
+    if (resultEl) resultEl.innerHTML = '<div style="color:#93c5fd;">正在校验账号密码...</div>';
+    try {
+        const r = await fetch('/api/rh-accounts/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({phone, password, note}),
+        });
+        const d = await r.json();
+        if (!d.success) {
+            if (resultEl) resultEl.innerHTML = '<div style="color:#fca5a5;">添加失败: ' + (d.error || '未知错误') + '</div>';
+            alert('添加失败: ' + (d.error || '未知错误'));
+            return;
+        }
+        document.getElementById('rhAddPhone').value = '';
+        document.getElementById('rhAddPassword').value = '';
+        document.getElementById('rhAddNote').value = '';
+        renderRhSetupResult(d);
+        await refreshRhAccounts();
+    } catch (e) {
+        if (resultEl) resultEl.innerHTML = '<div style="color:#fca5a5;">添加失败: ' + e.message + '</div>';
+        alert('添加失败: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '+ 添加'; }
+    }
+}
+
+async function setupRhAccount(ref) {
+    const phone = rhPhone(ref);
+    const resultEl = document.getElementById('rhAddResult');
+    if (resultEl) resultEl.innerHTML = '<div style="color:#93c5fd;">正在初始化 ' + maskPhone(phone) + '：校验账号密码...</div>';
+    try {
+        const r = await fetch(`/api/rh-accounts/setup?phone=${encodeURIComponent(phone)}`, {method: 'POST'});
+        const d = await r.json();
+        if (!d.steps && !d.success) {
+            if (resultEl) resultEl.innerHTML = '<div style="color:#fca5a5;">初始化失败: ' + (d.error || '未知错误') + '</div>';
+            alert('初始化失败: ' + (d.error || '未知错误'));
+            return;
+        }
+        renderRhSetupResult(d);
+        await refreshRhAccounts();
+    } catch (e) {
+        if (resultEl) resultEl.innerHTML = '<div style="color:#fca5a5;">初始化失败: ' + e.message + '</div>';
+        alert('初始化失败: ' + e.message);
+    }
+}
+
+async function deleteRhAccount(ref) {
+    const phone = rhPhone(ref);
+    if (!confirm(`确定删除账号 ${maskPhone(phone)}？`)) return;
+    try {
+        const r = await fetch(`/api/rh-accounts/delete?phone=${encodeURIComponent(phone)}`, {method: 'POST'});
+        const d = await r.json();
+        if (d.success) {
+            await refreshRhAccounts();
+        } else {
+            alert('删除失败: ' + (d.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
+async function resetRhAccount(ref) {
+    const phone = rhPhone(ref);
+    try {
+        const r = await fetch(`/api/rh-accounts/reset?phone=${encodeURIComponent(phone)}`, {method: 'POST'});
+        const d = await r.json();
+        if (d.success) {
+            await refreshRhAccounts();
+        } else {
+            alert('重置失败: ' + (d.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('重置失败: ' + e.message);
+    }
+}
+
+async function refreshRhStatusAll() {
+    const btn = document.getElementById('btnRefreshStatus');
+    if (btn) { btn.disabled = true; btn.textContent = '校准中...'; }
+    try {
+        const r = await fetch('/api/rh-accounts/refresh-status', {method: 'POST'});
+        const d = await r.json();
+        if (d.success) {
+            await refreshRhAccounts();
+        } else {
+            alert('校准失败: ' + (d.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('校准失败: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '实时校准'; }
+    }
+}
+
+async function refreshRhStatusOne(ref) {
+    const phone = rhPhone(ref);
+    try {
+        const r = await fetch(`/api/rh-accounts/refresh-status?phone=${encodeURIComponent(phone)}`, {method: 'POST'});
+        const d = await r.json();
+        if (d.success) {
+            await refreshRhAccounts();
+        } else {
+            alert('校准失败: ' + (d.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('校准失败: ' + e.message);
+    }
+}
+
+async function uploadRhWorkflow(ref) {
+    const phone = rhPhone(ref);
+    if (!confirm(`把坏节点工作流复制到账号 ${maskPhone(phone)}？已有副本会跳过。`)) return;
+    try {
+        const r = await fetch(`/api/rh-accounts/upload-workflow?phone=${encodeURIComponent(phone)}`, {method: 'POST'});
+        const d = await r.json();
+        if (d.success) {
+            await refreshRhAccounts();
+            const res = d.result || {};
+            if (res.skipped) {
+                alert('该账号已有副本: ' + (res.runtime_wf_id || ''));
+            } else {
+                alert('已复制工作流: ' + (res.runtime_wf_id || ''));
+            }
+        } else {
+            alert('上传失败: ' + ((d.result && d.result.error) || d.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('上传失败: ' + e.message);
+    }
+}
+
+async function loadHistory() {
+    try {
+        // 优先用 task_store 的历史列表（含状态、失败步骤、中间产物 URL）
+        let tasks = [];
+        try {
+            const hres = await fetch('/api/womenswear-studio/history?limit=30'
+                + (DSH_SESSION ? '&session=' + encodeURIComponent(DSH_SESSION) : ''));
+            const hdata = await hres.json();
+            if (hdata.success) tasks = hdata.tasks || [];
+        } catch (e) {}
+        // 若 task_store 为空，回退到 videos 接口
+        if (tasks.length === 0) {
+            const res = await fetch('/api/womenswear-studio/videos'
+                + (DSH_SESSION ? '?session=' + encodeURIComponent(DSH_SESSION) : ''));
+            const data = await res.json();
+            const list = document.getElementById('historyList');
+            if (!data.success || !data.videos || data.videos.length === 0) {
+                list.innerHTML = '';
+                const eg = document.getElementById('emptyGuide');
+                if (eg) eg.style.display = 'block';
+                return;
+            }
+            const egHide = document.getElementById('emptyGuide');
+            if (egHide) egHide.style.display = 'none';
+            list.innerHTML = data.videos.map((v) => `
+                <div class="history-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#1a1a30;border:1px solid transparent;border-radius:8px;cursor:pointer;transition:all .2s;" onclick='playHistoryVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})'>
+                    <div style="font-size:18px;">🎬</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:.82em;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.task_id}</div>
+                        <div style="font-size:.7em;color:#666;margin-top:2px;">${v.created_at_str} · ${v.size_mb} MB${v.rh_task_id ? ' · RH '+v.rh_task_id : ''}</div>
+                    </div>
+                    <div style="font-size:.7em;color:#3b82f6;background:rgba(59,130,246,.15);padding:2px 8px;border-radius:10px;white-space:nowrap;">▶ 播放</div>
+                </div>
+            `).join('');
+            list.querySelectorAll('.history-item').forEach(el => {
+                el.addEventListener('mouseenter', () => el.style.borderColor = '#0ea5e9');
+                el.addEventListener('mouseleave', () => el.style.borderColor = 'transparent');
+            });
+            return;
+        }
+        const list = document.getElementById('historyList');
+        const egT = document.getElementById('emptyGuide');
+        if (egT) egT.style.display = tasks.length ? 'none' : 'block';
+        const statusColor = {SUCCESS:'#22c55e', FAILED:'#f87171', RUNNING:'#3b82f6', INIT:'#a5a5c8'};
+        list.innerHTML = tasks.map((t) => `
+            <div class="history-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#1a1a30;border:1px solid transparent;border-radius:8px;cursor:pointer;transition:all .2s;" onclick='loadTaskDetail("${t.task_id}")'>
+                <div style="font-size:18px;">${t.status === 'SUCCESS' ? '🎬' : (t.status === 'FAILED' ? '⚠️' : '⏳')}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:.82em;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.product_title || t.task_id}</div>
+                    <div style="font-size:.7em;color:#666;margin-top:2px;">${t.created_at_str || ''} · ${t.progress || 0}%${t.failed_step ? ' · 失败@'+t.failed_step : ''}${t.rh_task_id ? ' · RH '+t.rh_task_id : ''}</div>
+                </div>
+                <div style="font-size:.7em;color:${statusColor[t.status] || '#888'};background:rgba(255,255,255,.06);padding:2px 8px;border-radius:10px;white-space:nowrap;">${t.status || '?'}</div>
+            </div>
+        `).join('');
+        list.querySelectorAll('.history-item').forEach(el => {
+            el.addEventListener('mouseenter', () => el.style.borderColor = '#0ea5e9');
+            el.addEventListener('mouseleave', () => el.style.borderColor = 'transparent');
+        });
+        if (!currentTaskId && tasks.length) {
+            const latest = tasks[0];
+            try {
+                const st = await fetch('/api/womenswear-studio/status?task_id=' + latest.task_id).then(r => r.json());
+                if (st && (st.status === 'RUNNING' || st.status === 'INIT') && (st.progress || 0) > 0) {
+                    setCurrentTask(latest.task_id);
+                    updateUI(st);
+                    startPolling();
+                    tryShowFinalVideo(latest.task_id, st);
+                }
+            } catch (e) {}
+        }
+    } catch (e) {
+        console.error('加载历史失败', e);
+    }
+}
+
+// 点击历史任务 → 加载详情（含中间产物 + 日志 + steps-bar）
+async function loadTaskDetail(taskId) {
+    try {
+        const res = await fetch('/api/womenswear-studio/task/' + taskId);
+        const data = await res.json();
+        if (!data.success) return false;
+        setCurrentTask(taskId);
+        // 进度条 + 状态
+        const pct = data.progress || 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        const pctEl = document.getElementById('progressPct');
+        if (pctEl) pctEl.textContent = pct + '%';
+        setBadge(data.status);
+        document.getElementById('stageText').textContent = (pct ? pct + '% · ' : '') + (data.stage || '');
+        // steps-bar
+        updateStepsBar(data.current_step, data.status, data.failed_step, data.intermediate);
+        // 回填输入信息
+        const _params = data.params || {};
+        const _inputPanel = document.getElementById('inputInfoPanel');
+        const _pUrl = _params.product_url || '';
+        const _vUrl = _params.video_url || '';
+        // FR-3 旧值兼容：历史任务 link/upload/beauty → product/creator
+        const _srcMode = normalizeSourceMode(_params.source_mode || 'product');
+        const _rawProduct = _params.raw_product_path || '';
+        const _sourceVideo = _params.source_video_path || '';
+        const _modelImage = _params.model_image_path || '';
+        const _scene = _params.scene_image_path || '';
+        if (_srcMode === 'creator') {
+            switchSourceTab('creator');
+            if (_rawProduct) {
+                document.getElementById('rawProductFilename').textContent = '[已上传] ' + _rawProduct.split(/[\\/]/).pop();
+                document.getElementById('rawProductCard').classList.add('has-file');
+            }
+            if (_sourceVideo) {
+                document.getElementById('sourceVideoFilename').textContent = '[已上传] ' + _sourceVideo.split(/[\\/]/).pop();
+                document.getElementById('sourceVideoCard').classList.add('has-file');
+            }
+            if (_scene) {
+                document.getElementById('sceneImageFilename').textContent = '[已上传] ' + _scene.split(/[\\/]/).pop();
+                document.getElementById('sceneImageCard').classList.add('has-file');
+            }
+            _inputPanel.style.display = 'block';
+            const pLink = document.getElementById('infoProductUrl');
+            const vLink = document.getElementById('infoVideoUrl');
+            pLink.textContent = '[模特图] ' + (_rawProduct ? _rawProduct.split(/[\\/]/).pop() : '无');
+            pLink.href = '#';
+            pLink.title = _rawProduct;
+            vLink.textContent = '[模仿视频] ' + (_sourceVideo ? _sourceVideo.split(/[\\/]/).pop() : '无');
+            vLink.href = '#';
+            vLink.title = _sourceVideo;
+        } else {
+            switchSourceTab('product');
+            if (_modelImage) {
+                document.getElementById('linkModelImageFilename').textContent = '[已上传] ' + _modelImage.split(/[\\/]/).pop();
+                document.getElementById('linkModelImageCard').classList.add('has-file');
+            }
+            // 回填背景图（可选，与素材出片一致：上传场景图 / 缺省抽关键帧）
+            if (_scene) {
+                document.getElementById('productSceneImageFilename').textContent = '[已上传] ' + _scene.split(/[\\/]/).pop();
+                document.getElementById('productSceneImageCard').classList.add('has-file');
+            }
+            if (_pUrl || _vUrl) {
+                _inputPanel.style.display = 'block';
+                const _extract = (s) => { const m = String(s||'').match(/https?:\/\/[^\s，。`'"<>]+/); return m ? m[0] : ''; };
+                const pLink = document.getElementById('infoProductUrl');
+                const vLink = document.getElementById('infoVideoUrl');
+                pLink.textContent = _pUrl.length > 60 ? _pUrl.slice(0,60) + '…' : _pUrl;
+                pLink.href = _extract(_pUrl) || _pUrl;
+                pLink.title = _pUrl;
+                vLink.textContent = _vUrl.length > 60 ? _vUrl.slice(0,60) + '…' : _vUrl;
+                vLink.href = _extract(_vUrl) || _vUrl;
+                vLink.title = _vUrl;
+            } else {
+                _inputPanel.style.display = 'none';
+            }
+        }
+
+        // 中间产物预览（复用 renderPreviewGrid，短剧5格/舞蹈4格）
+        const rawUrl = data.raw_product_url || (data.intermediate.step1 && data.intermediate.step1.output && data.intermediate.step1.output.raw_product) || '';
+        const flatUrl = data.flat_lay_url || (data.intermediate.step2 && data.intermediate.step2.output && data.intermediate.step2.output.flat_lay_url) || '';
+        const showUrl = data.showcase_url || (data.intermediate.step3 && data.intermediate.step3.output && data.intermediate.step3.output.showcase_url) || '';
+        const srcVideo = data.source_video_url || (data.intermediate.step4 && data.intermediate.step4.output && data.intermediate.step4.output.source_video) || '';
+        const s3out = (data.intermediate && data.intermediate.step3 && data.intermediate.step3.output) || {};
+        const s3in = (data.intermediate && data.intermediate.step3 && data.intermediate.step3.input) || {};
+        const keyframeUrl = s3out.keyframe_url || s3out.keyframe || '';
+        const isDrama = (s3out.mode === 'drama') || (s3in.mode === 'drama') || (s3out.mode === 'keyframe') || (s3in.mode === 'keyframe')
+            || ((s3in.source_mode || s3out.source_mode) === 'product');
+        renderPreviewGrid({rawUrl, flatUrl, showUrl, srcVideo, keyframeUrl, isDrama, intermediate: data.intermediate || {}});
+        // 最终视频
+        if (data.final_video_url) {
+            playHistoryVideo({url: data.final_video_url, task_id: taskId, raw_product_url: rawUrl, flat_lay_url: flatUrl, showcase_url: showUrl, source_video_url: srcVideo, intermediate: data.intermediate || {}});
+        } else {
+            tryShowFinalVideo(taskId, data);
+        }
+        // 失败重试按钮
+        if (data.status === 'FAILED') {
+            const stepNames = {step1:'Step1 商品图',step2:'Step2 平铺图',step3:'Step3 橱窗图',step4:'Step4 模仿视频',step5:'Step5 动作迁移'};
+            const failedStep = data.failed_step || '';
+            const errText = (data.error || data.stage || '任务失败').toString();
+            showSseError((failedStep ? ('失败步骤: ' + (stepNames[failedStep] || failedStep) + '\n') : '') + errText);
+            const st = document.getElementById('stageText');
+            if (st) st.textContent = '❌ ' + errText;
+            if (failedStep) {
+                const retryBtn = document.getElementById('retryBtn');
+                retryBtn.style.display = 'block';
+                document.querySelector('.retry-btn').textContent = '↻ 从 ' + (stepNames[failedStep] || failedStep) + ' 重试';
+            }
+        } else {
+            showSseError('');
+            document.getElementById('retryBtn').style.display = 'none';
+        }
+        // 日志
+        const logBox = document.getElementById('logBox');
+        if (data.logs && data.logs.length) {
+            logBox.innerHTML = data.logs.map(l => `<div class="log-line ${l.level || ''}">[${l.ts_str || ''}] ${l.message}</div>`).join('');
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+        if (data.status === 'RUNNING' || data.status === 'INIT') {
+            currentTaskId = taskId;
+            setBadge(data.status === 'RUNNING' ? 'RUNNING' : data.status);
+            startPolling();
+        }
+        return true;
+    } catch (e) {
+        console.error('加载任务详情失败', e);
+        return false;
+    }
+}
+
+function playHistoryVideo(v) {
+    const url = v.url;
+    const taskId = v.task_id;
+    const sec = document.getElementById('resultSection');
+    const vid = document.getElementById('resultVideo');
+    const ph = document.getElementById('videoPlaceholder');
+    sec.style.display = 'block';
+    if (ph) ph.style.display = 'none';
+    if (lastShownVideoUrl !== url) {
+        vid.src = url;
+        lastShownVideoUrl = url;
+    }
+    const playPromise = vid.play();
+    if (playPromise && playPromise.catch) playPromise.catch(() => {});
+
+    // 下载链接
+    const linksDiv = document.getElementById('resultLinks');
+    linksDiv.innerHTML = '';
+    const downloadLink = document.createElement('a');
+    downloadLink.className = 'result-link';
+    downloadLink.href = url;
+    downloadLink.download = '';
+    downloadLink.textContent = '⬇ 下载视频';
+    linksDiv.appendChild(downloadLink);
+
+    // 同步填充右侧发布工作台视频路径
+    const publishPathInput = document.getElementById('publishVideoPath');
+    publishPathInput.value = url;
+
+    // 自动生成抖音文案（识别服装 → 推理标题 + 标签）
+    autoGeneratePublishCopy(url);
+
+    // 恢复中间产物预览
+    const grid = document.getElementById('previewGrid');
+    // 从 intermediate 取 step4 的质量信息
+    let s4q = '';
+    try {
+        const s4 = (v.intermediate && v.intermediate.step4 && v.intermediate.step4.output) || {};
+        const q = s4.quality || '';
+        const t = s4.title || '';
+        const a = s4.author || '';
+        if (q) s4q = `<div class="quality-badge" style="position:absolute;top:6px;right:6px;background:rgba(34,197,94,.92);color:#fff;font-size:.7em;padding:2px 8px;border-radius:10px;font-weight:600;">✓ ${q}</div>`;
+        if (t || a) s4q += `<div style="position:absolute;bottom:30px;left:6px;right:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.7em;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a ? '【'+a+'】' : ''}${t}</div>`;
+    } catch(e) {}
+    // 复用 renderPreviewGrid（短剧5格/舞蹈4格）
+    const _s3 = (v.intermediate && v.intermediate.step3) || {};
+    const _isDrama = ((_s3.output && _s3.output.mode) === 'drama') || ((_s3.input && _s3.input.mode) === 'drama')
+        || ((_s3.output && _s3.output.mode) === 'keyframe') || ((_s3.input && _s3.input.mode) === 'keyframe')
+        || (((_s3.input && _s3.input.source_mode) || (_s3.output && _s3.output.source_mode)) === 'product');
+    const _kf = (_s3.output && (_s3.output.keyframe_url || _s3.output.keyframe)) || '';
+    renderPreviewGrid({
+        rawUrl: v.raw_product_url || '',
+        flatUrl: v.flat_lay_url || '',
+        showUrl: v.showcase_url || '',
+        srcVideo: v.source_video_url || '',
+        keyframeUrl: _kf,
+        isDrama: _isDrama,
+        intermediate: v.intermediate || {}
+    });
+
+    // 滚动到视频区域
+    sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// 自动生成抖音发布文案
+async function autoGeneratePublishCopy(videoUrl) {
+    const titleInput = document.getElementById('publishTitle');
+    const tagsInput = document.getElementById('publishTags');
+    // 标记生成中
+    titleInput.value = '生成中...';
+    titleInput.disabled = true;
+    tagsInput.value = '';
+    tagsInput.placeholder = '生成中...';
+    try {
+        const res = await fetch('/api/publish/generate-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_path: videoUrl })
+        });
+        const data = await res.json();
+        if (data.success) {
+            titleInput.value = data.title || '';
+            tagsInput.value = (data.tags || []).join(',');
+            tagsInput.placeholder = '标签（逗号分隔）';
+            if (data.clothing_type) {
+                const tip = document.createElement('div');
+                tip.style.cssText = 'font-size:.7em;color:#6b7280;margin-top:4px;';
+                tip.textContent = '👗 识别：' + data.clothing_type;
+                titleInput.parentElement.appendChild(tip);
+                setTimeout(() => tip.remove(), 8000);
+            }
+        } else {
+            titleInput.value = '';
+            tagsInput.value = '';
+            tagsInput.placeholder = '标签（逗号分隔）';
+            console.warn('文案生成失败', data.detail);
+        }
+    } catch (e) {
+        titleInput.value = '';
+        tagsInput.value = '';
+        tagsInput.placeholder = '标签（逗号分隔）';
+        console.warn('文案生成异常', e);
+    } finally {
+        titleInput.disabled = false;
+    }
+}
+
+function startPolling() {
+    stopPolling();
+    const gen = pollGeneration;
+    pollFailCount = 0;
+    const loop = async () => {
+        if (gen !== pollGeneration) return;
+        if (!currentTaskId) return;
+        try {
+            const res = await fetchWithTimeout(
+                '/api/womenswear-studio/status?task_id=' + encodeURIComponent(currentTaskId),
+                {},
+                8000
+            );
+            if (gen !== pollGeneration) return;
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+            const data = await res.json();
+            if (gen !== pollGeneration) return;
+            if (!data || data.status === 'MISSING' || data.status === 'UNKNOWN') {
+                stopPolling();
+                const err = (data && (data.error || data.detail)) || '任务不存在';
+                addLog(String(err), 'error');
+                showSseError(String(err));
+                const btn = document.getElementById('runBtn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('running');
+                    btn.textContent = '开始生成';
+                }
+                return;
+            }
+            if (data.success === false) {
+                throw new Error(data.error || data.detail || '状态查询失败');
+            }
+            pollFailCount = 0;
+            updateUI(data);
+            if (data.status === 'SUCCESS') {
+                stopPolling();
+                loadHistory();
+                refreshRhAccounts();
+                return;
+            }
+            if (data.status === 'FAILED') {
+                stopPolling();
+                return;
+            }
+        } catch (e) {
+            if (gen !== pollGeneration) return;
+            pollFailCount += 1;
+            const msg = (e && e.name === 'AbortError') ? '进度查询超时' : ('进度查询失败: ' + (e.message || e));
+            console.error('轮询异常', e);
+            if (pollFailCount === 1 || pollFailCount % 4 === 0) addLog(msg, 'error');
+            showSseError(msg);
+        }
+        if (gen === pollGeneration && currentTaskId) {
+            pollTimer = setTimeout(loop, pollFailCount > 2 ? 5000 : 2500);
+        }
+    };
+    loop();
+}
+
+async function abortTask() {
+    if (!currentTaskId) {
+        alert('无任务可中止');
+        return;
+    }
+    const abortBtn = document.getElementById('abortRunBtn');
+    if (abortBtn) {
+        abortBtn.disabled = true;
+        abortBtn.textContent = '中止中...';
+    }
+    addLog('触发任务中止', 'running');
+    try {
+        const res = await fetch('/api/womenswear-studio/abort?task_id=' + currentTaskId, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            addLog('任务已中止，可点击"重试失败步骤"从断点继续', 'done');
+            if (abortBtn) abortBtn.style.display = 'none';
+            const retryBtn = document.getElementById('retryRunBtn');
+            if (retryBtn) retryBtn.style.display = 'block';
+            setBadge('FAILED');
+            // 立即查一次状态同步 UI
+            fetch('/api/womenswear-studio/status?task_id=' + currentTaskId)
+                .then(r => r.json())
+                .then(d => updateUI(d))
+                .catch(e => {});
+        } else {
+            addLog('中止失败: ' + (data.detail || '未知错误'), 'error');
+            if (abortBtn) {
+                abortBtn.disabled = false;
+                abortBtn.textContent = '⛔ 中止任务';
+            }
+        }
+    } catch (e) {
+        addLog('中止异常: ' + e.message, 'error');
+        if (abortBtn) {
+            abortBtn.disabled = false;
+            abortBtn.textContent = '⛔ 中止任务';
+        }
+    }
+}
+
+async function retryFailed() {
+    if (!currentTaskId) {
+        alert('无任务可重试');
+        return;
+    }
+    const retryWrap = document.getElementById('retryBtn');
+    const retryBtn = retryWrap ? retryWrap.querySelector('.retry-btn') : null;
+    if (retryBtn) {
+        retryBtn.disabled = true;
+        retryBtn.textContent = '重试中...';
+    }
+    addLog('触发断点重试', 'running');
+    try {
+        const res = await fetch('/api/womenswear-studio/retry?task_id=' + currentTaskId, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) {
+            addLog('重试失败: ' + (data.detail || '未知错误'), 'error');
+            if (retryBtn) {
+                retryBtn.disabled = false;
+                retryBtn.textContent = '重试失败步骤';
+            }
+            return;
+        }
+        addLog('重试已启动', 'done');
+        lastTerminalLogged = '';
+        rpaWaitStarted = 0;
+        if (retryWrap) retryWrap.style.display = 'none';
+        const runBtn = document.getElementById('runBtn');
+        runBtn.disabled = true;
+        runBtn.classList.add('running');
+        runBtn.textContent = '重试中...';
+        const altRetry = document.getElementById('retryRunBtn');
+        if (altRetry) altRetry.style.display = 'none';
+        setBadge('RUNNING');
+        startPolling();
+    } catch (e) {
+        addLog('重试异常: ' + e.message, 'error');
+        if (retryBtn) {
+            retryBtn.disabled = false;
+            retryBtn.textContent = '重试失败步骤';
+        }
+    }
+}
+
+function showSseError(msg) {
+    const el = document.getElementById('sseError');
+    const fill = document.getElementById('progressFill');
+    if (!el) return;
+    const text = (msg || '').toString().trim();
+    if (text) {
+        el.style.display = 'block';
+        el.textContent = '❌ ' + text;
+        if (fill) fill.classList.add('failed');
+    } else {
+        el.style.display = 'none';
+        el.textContent = '';
+        if (fill) fill.classList.remove('failed');
+    }
+}
+
+function updateUI(data) {
+    const fill = document.getElementById('progressFill');
+    const stage = document.getElementById('stageText');
+    let pct = data.progress || 0;
+    const isRpa = (data.current_step === 'step5' || String(data.stage || '').indexOf('Step5-RPA') === 0)
+        && (data.status === 'RUNNING' || data.status === 'INIT');
+    if (isRpa && pct >= 80 && pct < 100) {
+        showSseError('');
+        if (!rpaWaitStarted) rpaWaitStarted = Date.now();
+        const elapsed = Math.floor((Date.now() - rpaWaitStarted) / 1000);
+        const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const ss = String(elapsed % 60).padStart(2, '0');
+        if (pct <= 90) pct = Math.min(98, Math.max(pct, 89 + Math.floor(elapsed / 120)));
+        fill.style.width = pct + '%';
+        const pctEl = document.getElementById('progressPct');
+        if (pctEl) pctEl.textContent = pct + '%';
+        setBadge(data.status);
+        if (data.stage && data.stage !== lastStage) {
+            addLog(data.stage, 'running');
+            lastStage = data.stage;
+        }
+        stage.textContent = pct + '% · RPA 出片中 已等待 ' + mm + ':' + ss + (data.stage ? ' · ' + data.stage : '');
+        return;
+    }
+    rpaWaitStarted = 0;
+    if (data.status !== 'FAILED') showSseError('');
+    fill.style.width = pct + '%';
+    const pctEl = document.getElementById('progressPct');
+    if (pctEl) pctEl.textContent = pct + '%';
+    setBadge(data.status);
+
+    if (data.stage && data.stage !== lastStage) {
+        addLog(data.stage, data.status === 'FAILED' ? 'error' : 'running');
+        lastStage = data.stage;
+    }
+    stage.textContent = (pct ? pct + '% · ' : '') + (data.stage || '');
+
+    if (data.rh_task_id) {
+        document.getElementById('rhInfo').textContent = 'RH: ' + data.rh_task_id;
+    }
+    if (data.product_title) {
+        document.getElementById('rhInfo').textContent = (data.product_title || '').substring(0,30);
+    }
+
+    // 回填输入信息（商品链接 / 模仿视频链接）
+    const params = data.params || {};
+    const inputPanel = document.getElementById('inputInfoPanel');
+    const pUrl = params.product_url || '';
+    const vUrl = params.video_url || '';
+    if (pUrl || vUrl) {
+        inputPanel.style.display = 'block';
+        const pLink = document.getElementById('infoProductUrl');
+        const vLink = document.getElementById('infoVideoUrl');
+        // 从分享文案中提取纯 URL
+        const extractUrl = (s) => { const m = String(s||'').match(/https?:\/\/[^\s，。`'"<>]+/); return m ? m[0] : ''; };
+        const pureP = extractUrl(pUrl) || pUrl;
+        const pureV = extractUrl(vUrl) || vUrl;
+        pLink.textContent = pUrl.length > 60 ? pUrl.slice(0,60) + '…' : pUrl;
+        pLink.href = pureP;
+        pLink.title = pUrl;
+        vLink.textContent = vUrl.length > 60 ? vUrl.slice(0,60) + '…' : vUrl;
+        vLink.href = pureV;
+        vLink.title = vUrl;
+    }
+
+    // 更新 steps-bar 高亮
+    updateStepsBar(data.current_step, data.status, data.failed_step, data.intermediate);
+
+    if (data.status === 'SUCCESS') {
+        const doneKey = (currentTaskId || '') + ':SUCCESS';
+        if (lastTerminalLogged !== doneKey) {
+            addLog('任务完成', 'done');
+            lastTerminalLogged = doneKey;
+        }
+        stopPolling();
+        const btn = document.getElementById('runBtn');
+        btn.disabled = false;
+        btn.classList.remove('running');
+        btn.textContent = '重新生成';
+        document.getElementById('retryBtn').style.display = 'none';
+        const abortBtn = document.getElementById('abortRunBtn');
+        if (abortBtn) abortBtn.style.display = 'none';
+        const outUrl = finalVideoUrl(currentTaskId, data);
+        if (outUrl && !(data.outputs && data.outputs.length)) {
+            showResult({...data, outputs: [{fileUrl: outUrl, fileType: 'mp4'}]});
+        } else {
+            showResult(data);
+        }
+    } else if (data.status === 'FAILED') {
+        const stepNames = {step1:'Step1 商品图',step2:'Step2 平铺图',step3:'Step3 橱窗图',step4:'Step4 模仿视频',step5:'Step5 动作迁移'};
+        const failedStep = data.failed_step || '';
+        const errText = (data.error || data.stage || '任务失败').toString();
+        const errFull = (failedStep ? ('失败步骤: ' + (stepNames[failedStep] || failedStep) + '\n') : '') + errText;
+        const failKey = (currentTaskId || '') + ':FAILED:' + errText;
+        if (lastTerminalLogged !== failKey) {
+            addLog('失败: ' + errText, 'error');
+            lastTerminalLogged = failKey;
+            if (currentTaskId) addLog('可点击"重试失败步骤"从断点继续', 'running');
+        }
+        showSseError(errFull);
+        stopPolling();
+        const btn = document.getElementById('runBtn');
+        btn.disabled = false;
+        btn.classList.remove('running');
+        btn.textContent = '开始生成';
+        const abortBtn = document.getElementById('abortRunBtn');
+        if (abortBtn) abortBtn.style.display = 'none';
+        if (currentTaskId) {
+            document.getElementById('retryBtn').style.display = 'block';
+            const retryLabel = document.querySelector('.retry-btn');
+            if (retryLabel) retryLabel.textContent = '↻ 从 ' + (stepNames[failedStep] || failedStep || '失败步骤') + ' 重试';
+        }
+        stage.textContent = '❌ ' + errText;
+        // 登录态 / Cookie 失效导致的失败 → 回到首次登录引导（三步走弹窗）重新登录
+        if (/登录|token|TOKEN|401|403/.test(errText)) frShowGuide();
+        else initFirstRunGuide();
+    }
+
+    // 更新预览图（短剧模式5格/舞蹈模式4格，按产物增量日志）
+    const prevCounts = (window._previewCounts = window._previewCounts || {});
+    const rawUrl = data.raw_product_url || '';
+    const flatUrl = data.flat_lay_url || '';
+    const showUrl = data.showcase_url || '';
+    const srcVideo = data.source_video_url || '';
+    const s3out = (data.intermediate && data.intermediate.step3 && data.intermediate.step3.output) || {};
+    const s3in = (data.intermediate && data.intermediate.step3 && data.intermediate.step3.input) || {};
+    const keyframeUrl = s3out.keyframe_url || s3out.keyframe || '';
+    const isDrama = (s3out.mode === 'drama') || (s3in.mode === 'drama') || (s3out.mode === 'keyframe') || (s3in.mode === 'keyframe')
+        || ((s3in.source_mode || s3out.source_mode) === 'product');
+    renderPreviewGrid({rawUrl, flatUrl, showUrl, srcVideo, keyframeUrl, isDrama, intermediate: data.intermediate || {}});
+    // 增量日志
+    if (rawUrl && !prevCounts.raw) { addLog(s3in.source_mode === 'creator' ? '模特图已就绪' : '原始商品图已下载', 'done'); prevCounts.raw = 1; }
+    if (flatUrl && !prevCounts.flat) { addLog('白底平铺图已生成', 'done'); prevCounts.flat = 1; }
+    if (isDrama && keyframeUrl && !prevCounts.kf) { addLog('视频关键帧已抽取', 'done'); prevCounts.kf = 1; }
+    if (showUrl && !prevCounts.show) { addLog((isDrama || s3in.mode === 'scene_upload' || s3in.source_mode === 'creator') ? '融合参考图已生成' : '橱窗展示图已生成', 'done'); prevCounts.show = 1; }
+    if (srcVideo && !prevCounts.vid) { addLog('模仿视频已下载', 'done'); prevCounts.vid = 1; }
+}
+
+// 渲染预览网格（短剧5格/舞蹈4格）。只更新 src 变化的格子，避免整格重绘导致图片闪、视频重播。
+function renderPreviewGrid({rawUrl, flatUrl, showUrl, srcVideo, keyframeUrl, isDrama, intermediate}) {
+    const grid = document.getElementById('previewGrid');
+    if (!grid) return;
+    const sig = [rawUrl || '', flatUrl || '', showUrl || '', srcVideo || '', keyframeUrl || '', isDrama ? '1' : '0'].join('\x1f');
+    if (sig === lastPreviewSignature && grid.children.length) return;
+    lastPreviewSignature = sig;
+    let _s4q = '';
+    try {
+        const s4 = (intermediate && intermediate.step4 && intermediate.step4.output) || {};
+        const _q = s4.quality || ''; const _t = s4.title || ''; const _a = s4.author || '';
+        if (_q) _s4q = `<div class="quality-badge" style="position:absolute;top:6px;right:6px;background:rgba(34,197,94,.92);color:#fff;font-size:.7em;padding:2px 8px;border-radius:10px;font-weight:600;">✓ ${_q}</div>`;
+        if (_t || _a) _s4q += `<div style="position:absolute;bottom:30px;left:6px;right:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.7em;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_a ? '【'+_a+'】' : ''}${_t}</div>`;
+    } catch(e) {}
+    const cells = (() => {
+        // FR-4：素材出片跳过平铺图（step2 skipped）→ 不显示平铺图格，标签改为「模特图」
+        const s2out = (intermediate && intermediate.step2 && intermediate.step2.output) || {};
+        const flatSkipped = !!s2out.skipped;
+        const s3inG = (intermediate && intermediate.step3 && intermediate.step3.input) || {};
+        const fusionLabel = isDrama || s3inG.mode === 'scene_upload' || s3inG.source_mode === 'creator';
+        const list = [
+            {slot: 'raw', url: rawUrl || '', kind: 'img', label: flatSkipped ? '模特图' : '原始商品图', ph: '📦'},
+        ];
+        if (!flatSkipped) list.push({slot: 'flat', url: flatUrl || '', kind: 'img', label: '白底平铺图', ph: '👕'});
+        if (isDrama) list.push({slot: 'kf', url: keyframeUrl || '', kind: 'img', label: '视频关键帧', ph: '🎞️'});
+        list.push({slot: 'show', url: showUrl || '', kind: 'img', label: fusionLabel ? '融合参考图' : '橱窗展示图', ph: '🖼️'});
+        list.push({slot: 'vid', url: srcVideo || '', kind: 'video', label: '模仿视频', ph: '🎬', extra: srcVideo ? _s4q : ''});
+        return list;
+    })();
+    const wanted = cells.map(c => c.slot).join(',');
+    if (grid.dataset.slots !== wanted) {
+        grid.innerHTML = cells.map(c => `<div class="preview-item" data-slot="${c.slot}"></div>`).join('');
+        grid.dataset.slots = wanted;
+        grid.style.gridTemplateColumns = 'repeat(' + cells.length + ', 1fr)';
+    }
+    cells.forEach(c => {
+        const el = grid.querySelector('[data-slot="' + c.slot + '"]');
+        if (!el) return;
+        const nextSrc = c.url || '';
+        if (el.dataset.src === nextSrc && el.dataset.kind === c.kind) return;
+        el.dataset.src = nextSrc;
+        el.dataset.kind = c.kind;
+        el.className = 'preview-item' + (nextSrc ? '' : ' placeholder');
+        if (!nextSrc) {
+            el.innerHTML = '<span style="font-size:2em;opacity:.3;">' + c.ph + '</span><div class="label">' + c.label + '</div>';
+            return;
+        }
+        if (c.kind === 'video') {
+            el.innerHTML = '<video src="' + nextSrc + '" controls loop muted></video>' + (c.extra || '') + '<div class="label">' + c.label + '</div>';
+        } else {
+            el.innerHTML = '<img src="' + nextSrc + '"><div class="label">' + c.label + '</div>';
+        }
+    });
+}
+
+// steps-bar 高亮：根据 current_step 和 status；FR-4 跳过步显示灰色「跳过」
+function updateStepsBar(currentStep, status, failedStep, intermediate) {
+    const stepIds = ['ws_step1', 'ws_step2', 'ws_step3', 'ws_step4', 'ws_step5'];
+    const stepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+    const stepLabels = {step1:'Step1 商品图',step2:'Step2 平铺图',step3:'Step3 橱窗图',step4:'Step4 模仿视频',step5:'Step5 动作迁移'};
+    let activeIdx = -1;
+    if (currentStep && currentStep !== 'init' && currentStep !== 'done') {
+        activeIdx = stepKeys.indexOf(currentStep);
+    }
+    if (status === 'SUCCESS') activeIdx = stepKeys.length; // 全部 done
+    stepIds.forEach((id, idx) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const key = stepKeys[idx];
+        el.className = 'step-item';
+        const skipped = !!(intermediate && intermediate[key] && intermediate[key].output && intermediate[key].output.skipped);
+        const labelEl = document.getElementById('ws_label' + (idx + 1));
+        if (labelEl) labelEl.textContent = stepLabels[key] + (skipped ? '（跳过）' : '');
+        if (status === 'FAILED' && failedStep === key) {
+            el.classList.add('failed');
+        } else if (skipped) {
+            el.classList.add('skipped');
+        } else if (idx < activeIdx) {
+            el.classList.add('done');
+        } else if (idx === activeIdx) {
+            el.classList.add('active');
+        } else if (status === 'SUCCESS') {
+            el.classList.add('done');
+        }
+    });
+}
+
+function showResult(data) {
+    document.getElementById('videoPlaceholder').style.display = 'none';
+    const section = document.getElementById('resultSection');
+    section.style.display = 'block';
+    const video = document.getElementById('resultVideo');
+    const linksDiv = document.getElementById('resultLinks');
+    linksDiv.innerHTML = '';
+
+    if (data.outputs && data.outputs.length > 0) {
+        const out = data.outputs.find(o => o.fileType === 'mp4') || data.outputs[0];
+        if (lastShownVideoUrl !== out.fileUrl) {
+            video.src = out.fileUrl;
+            lastShownVideoUrl = out.fileUrl;
+        }
+
+        const downloadLink = document.createElement('a');
+        downloadLink.className = 'result-link';
+        downloadLink.href = out.fileUrl;
+        downloadLink.download = '';
+        downloadLink.textContent = '⬇ 下载视频';
+        linksDiv.appendChild(downloadLink);
+
+        // 自动填充右侧发布工作台
+        const publishPathInput = document.getElementById('publishVideoPath');
+        const publishTitleInput = document.getElementById('publishTitle');
+        publishPathInput.value = out.fileUrl;
+        if (data.product_title && !publishTitleInput.value.trim()) {
+            publishTitleInput.value = data.product_title;
+        }
+    }
+}
+
+// ─── 抖音发布工作台 ───
+let publishPollTimer = null;
+
+async function publishLogin() {
+    const btn = document.getElementById('publishLoginBtn');
+    const status = document.getElementById('publishLoginStatus');
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    status.textContent = '请扫码登录抖音（浏览器窗口已弹出）';
+    try {
+        const res = await fetch('/api/publish/login', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            publishPollLogin(data.task_id);
+        } else {
+            btn.disabled = false;
+            btn.textContent = '扫码登录抖音';
+            status.textContent = '❌ ' + (data.detail || '启动失败');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '扫码登录抖音';
+        status.textContent = '❌ ' + e.message;
+    }
+}
+
+function publishPollLogin(taskId) {
+    const btn = document.getElementById('publishLoginBtn');
+    const status = document.getElementById('publishLoginStatus');
+    if (publishPollTimer) {
+        clearTimeout(publishPollTimer);
+        publishPollTimer = null;
+    }
+    let stopped = false;
+    const loop = async () => {
+        if (stopped) return;
+        try {
+            const res = await fetchWithTimeout('/api/publish/status?task_id=' + encodeURIComponent(taskId), {}, 8000);
+            const data = await res.json();
+            status.textContent = data.stage || data.status;
+            if (data.status === 'SUCCESS') {
+                stopped = true;
+                btn.disabled = false;
+                btn.textContent = '重新登录';
+                const nick = data.nickname ? '（' + data.nickname + '）' : '';
+                status.innerHTML = '✅ 登录成功' + nick;
+                return;
+            } else if (data.status === 'FAILED') {
+                stopped = true;
+                btn.disabled = false;
+                btn.textContent = '扫码登录抖音';
+                status.innerHTML = '❌ ' + (data.error || '登录失败');
+                return;
+            }
+        } catch (e) {}
+        if (!stopped) publishPollTimer = setTimeout(loop, 2000);
+    };
+    loop();
+}
+
+// ─── 分步式 RPA 发布（走一步停一步，等用户指令继续）───
+const PUBLISH_STEPS = [
+    { key: 'init',           label: '启动浏览器 + 打开发布页' },
+    { key: 'upload',         label: '上传视频文件 + 等待上传完成' },
+    { key: 'fill_title',     label: '填写标题' },
+    { key: 'fill_tags',      label: '填写标签' },
+    { key: 'pre_publish',    label: '发布前截屏 + 识别页面' },
+    { key: 'locate_publish', label: '🔎 定位发布按钮 + 截图识别' },
+    { key: 'publish',        label: '👆 点击发布 + 等待完成' },
+];
+let publishSessionId = null;
+
+function _renderPublishSteps(currentStep, finished, error) {
+    const list = document.getElementById('publishStepsList');
+    if (!list) return;
+    const curIdx = PUBLISH_STEPS.findIndex(s => s.key === currentStep);
+    list.innerHTML = PUBLISH_STEPS.map((s, i) => {
+        let icon = '⏳', color = '#555';
+        if (finished && !error && i <= curIdx) { icon = '✅'; color = '#10b981'; }
+        else if (error && i === curIdx) { icon = '❌'; color = '#fca5a5'; }
+        else if (i < curIdx) { icon = '✅'; color = '#10b981'; }
+        else if (i === curIdx) { icon = '▶'; color = '#fbbf24'; }
+        return `<div style="display:flex;align-items:center;gap:8px;color:${color};">
+            <span>${icon}</span><span>${i+1}. ${s.label}</span>
+        </div>`;
+    }).join('');
+}
+
+function _appendPublishLogs(logs) {
+    const box = document.getElementById('publishLogList');
+    if (!box) return;
+    box.innerHTML = (logs || []).map(l => `<div>${l}</div>`).join('');
+    box.scrollTop = box.scrollHeight;
+}
+
+function _renderPublishSnapshot(domInfo, screenshot) {
+    const box = document.getElementById('publishSnapshotBox');
+    const txt = document.getElementById('publishSnapshotText');
+    const img = document.getElementById('publishSnapshotImg');
+    if (!domInfo) {
+        box.style.display = 'none';
+        return;
+    }
+    box.style.display = 'block';
+    const btns = (domInfo.buttons || []).map(b => `${b.text}${b.disabled ? '(禁用)' : ''}`);
+    const editors = (domInfo.editors || []).map(e => `[${e.length}字]${e.text.slice(0, 50)}`);
+    txt.textContent = `URL: ${domInfo.url || ''}\n标题: ${domInfo.title || ''}\nfileInputs: ${domInfo.fileInputs ?? '-'}\n按钮: ${btns.join(' | ') || '无'}\n编辑器: ${editors.join(' | ') || '无'}`;
+    if (screenshot) {
+        // 截屏路径是绝对路径，转成 /uploads/xxx URL
+        const fname = screenshot.split(/[\\\/]/).pop();
+        img.src = '/uploads/' + fname + '?t=' + Date.now();
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+}
+
+async function publishToDouyinStep() {
+    const videoPath = document.getElementById('publishVideoPath').value.trim();
+    const title = document.getElementById('publishTitle').value.trim();
+    const tagsStr = document.getElementById('publishTags').value.trim();
+    if (!videoPath) { alert('请先生成视频或手动输入视频路径'); return; }
+
+    const tags = tagsStr ? tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean) : [];
+
+    const btn = document.getElementById('publishRunBtn');
+    const panel = document.getElementById('publishStepsPanel');
+    const nextBtn = document.getElementById('publishNextBtn');
+    const abortBtn = document.getElementById('publishAbortBtn');
+    btn.disabled = true; btn.textContent = '分步发布中...';
+    panel.style.display = 'block';
+    nextBtn.disabled = true; nextBtn.textContent = '启动中...';
+    abortBtn.disabled = false;
+
+    _renderPublishSteps('init', false, null);
+    _appendPublishLogs(['启动会话...']);
+
+    try {
+        const res = await fetch('/api/publish/session/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_path: videoPath, title: title, tags: tags })
+        });
+        const data = await res.json();
+        publishSessionId = data.session_id;
+        _handlePublishSessionResult(data);
+    } catch (e) {
+        _appendPublishLogs(['❌ ' + e.message]);
+        btn.disabled = false; btn.textContent = '启动分步发布（走一步停一步）';
+        const nextBtn2 = document.getElementById('publishNextBtn');
+        nextBtn2.disabled = true; nextBtn2.textContent = '继续下一步 →';
+    }
+}
+
+async function publishSessionNext() {
+    if (!publishSessionId) return;
+    const nextBtn = document.getElementById('publishNextBtn');
+    nextBtn.disabled = true; nextBtn.textContent = '执行中...';
+    try {
+        const res = await fetch('/api/publish/session/' + publishSessionId + '/next', { method: 'POST' });
+        const data = await res.json();
+        _handlePublishSessionResult(data);
+    } catch (e) {
+        _appendPublishLogs(['❌ ' + e.message]);
+        nextBtn.disabled = false; nextBtn.textContent = '继续下一步 →';
+    }
+}
+
+async function publishSessionAbort() {
+    if (!publishSessionId) return;
+    if (!confirm('确定放弃本次发布？浏览器会被关闭。')) return;
+    const abortBtn = document.getElementById('publishAbortBtn');
+    abortBtn.disabled = true;
+    try {
+        await fetch('/api/publish/session/' + publishSessionId + '/abort', { method: 'POST' });
+    } catch (e) {}
+    _finishPublishSession(false, '已放弃');
+}
+
+function _handlePublishSessionResult(data) {
+    _appendPublishLogs(data.logs || []);
+    _renderPublishSnapshot(data.dom_info, data.screenshot);
+
+    const btn = document.getElementById('publishRunBtn');
+    const nextBtn = document.getElementById('publishNextBtn');
+    const abortBtn = document.getElementById('publishAbortBtn');
+
+    if (data.finished) {
+        // 发布流程结束（成功或失败）
+        _finishPublishSession(data.success, data.success ? '发布成功' : (data.error || '发布失败'), data.url);
+        if (data.success) {
+            _appendPublishLogs(['✅ 发布成功！', '视频管理页: ' + (data.url || '')]);
+        } else {
+            _appendPublishLogs(['❌ ' + (data.error || '发布失败')]);
+        }
+        return;
+    }
+
+    if (data.paused) {
+        // 暂停等用户继续
+        _renderPublishSteps(data.step, false, data.error);
+        nextBtn.disabled = false;
+        // 根据下一步显示不同提示
+        if (data.next_step === 'locate_publish') {
+            nextBtn.textContent = '🔎 定位发布按钮 →';
+            nextBtn.style.background = 'linear-gradient(90deg,#f59e0b,#ef4444)';
+        } else if (data.next_step === 'publish') {
+            nextBtn.textContent = '👆 点击发布按钮 →';
+            nextBtn.style.background = 'linear-gradient(90deg,#ef4444,#f97316)';
+        } else {
+            nextBtn.textContent = '继续下一步 →（' + (data.next_step || '') + '）';
+            nextBtn.style.background = 'linear-gradient(90deg,#10b981,#06b6d4)';
+        }
+        abortBtn.disabled = false;
+        btn.textContent = '分步发布中（暂停等待指令）';
+    } else if (data.error) {
+        // 步骤失败但仍暂停（可重试或放弃）
+        _renderPublishSteps(data.step, false, data.error);
+        nextBtn.disabled = false;
+        nextBtn.textContent = '重试此步 →';
+        abortBtn.disabled = false;
+        _appendPublishLogs(['❌ ' + data.error]);
+    } else {
+        _renderPublishSteps(data.step, false, null);
+        nextBtn.disabled = true; nextBtn.textContent = '处理中...';
+    }
+}
+
+function _finishPublishSession(success, msg, url) {
+    publishSessionId = null;
+    const btn = document.getElementById('publishRunBtn');
+    const nextBtn = document.getElementById('publishNextBtn');
+    const abortBtn = document.getElementById('publishAbortBtn');
+    btn.disabled = false;
+    btn.textContent = '重新启动分步发布';
+    nextBtn.disabled = true; nextBtn.textContent = '已完成';
+    abortBtn.disabled = true;
+    if (success) {
+        _renderPublishSteps('publish', true, null);
+    }
+}
+
+// 视频路径变化时同步标题（如果标题为空则用文件名）
+document.getElementById('publishVideoPath').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    const titleInput = document.getElementById('publishTitle');
+    if (v && !titleInput.value.trim()) {
+        const fname = v.split('/').pop().replace(/\.mp4$/i, '');
+        titleInput.value = fname;
+    }
+});
+// ───── 新手引导：字段级帮助 ❓ ─────
+const FIELD_HELP = {
+    productUrl: `<b>抖音商品链接</b><br>在抖音 App 或商城里打开商品 → 点「分享」→ 复制链接。<br><span class="ok">✓ 支持 https://v.douyin.com/xxx 短链或完整商城链接</span><br><span class="bad">✗ 避免：视频链接、直播间链接</span>`,
+    videoUrl: `<b>模仿的抖音视频链接</b><br>你想模仿其动作/节奏的带货视频：打开视频 → 分享 → 复制链接。<br><span class="ok">✓ 推荐：动作清晰、节奏明快的带货视频</span><br><span class="bad">✗ 避免：多人合拍、画面混乱的视频</span>`,
+    productModel: `<b>模特图（商品出片）</b><br>商品将穿到这个模特身上出片。<br><span class="ok">✓ 推荐：单人、正面/半身、光线均匀（白底或简单背景均可）</span><br><span class="bad">✗ 避免：多人合照、脸部遮挡、肢体截断</span>`,
+    productBg: `<b>背景图（可选）</b><br><span class="ok">✓ 上传：模特置入你指定的背景（如门店、街景、摄影棚）</span><br><span class="ok">✓ 不传：自动用模仿视频关键帧作背景</span><br>支持 JPG/PNG，建议竖图或方图`,
+    creatorModel: `<b>模特图（素材出片）</b><br>系统自动识别：<br><span class="ok">✓ 含模特的图：直接用作模特（自动识别白底/有背景）</span><br><span class="ok">✓ 纯服装图：自动搭配默认模特</span>`,
+    creatorVideo: `<b>模仿视频</b><br>动作迁移的动作源：模特将模仿这个视频里的动作。<br><span class="ok">✓ 推荐：5-30 秒、动作清晰的单人带货视频</span><br>支持 MP4/MOV`,
+    creatorBg: `<b>背景图（可选）</b><br><span class="ok">✓ 不传：模特图自带背景直接用 / 白底图用视频关键帧背景</span><br><span class="ok">✓ 上传：模特置入新背景（原背景自动清除）</span>`,
+};
+let helpPopEl = null;
+function closeHelpPop() { if (helpPopEl) { helpPopEl.remove(); helpPopEl = null; } }
+function initFieldHelp() {
+    document.querySelectorAll('.field-help').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const key = el.getAttribute('data-help');
+            const wasOpen = helpPopEl && helpPopEl._key === key;
+            closeHelpPop();
+            if (wasOpen) return;
+            const pop = document.createElement('div');
+            pop.className = 'field-help-pop';
+            pop.innerHTML = FIELD_HELP[key] || '';
+            pop._key = key;
+            document.body.appendChild(pop);
+            const rect = el.getBoundingClientRect();
+            let left = rect.left + window.scrollX - 130;
+            left = Math.max(12, Math.min(left, window.innerWidth - 292));
+            let top = rect.bottom + window.scrollY + 8;
+            if (top + 200 > window.scrollY + window.innerHeight) top = rect.top + window.scrollY - 150;
+            pop.style.left = left + 'px';
+            pop.style.top = top + 'px';
+            helpPopEl = pop;
+        });
+    });
+    document.addEventListener('click', (e) => {
+        if (helpPopEl && !helpPopEl.contains(e.target)) closeHelpPop();
+    });
+}
+initFieldHelp();
+
+// ───── 新手引导：载入示例任务（一键体验，切到素材出片，无需填链接） ─────
+async function loadExampleTask() {
+    try {
+        switchSourceTab('creator');
+        toastOrLog('正在载入示例素材...');
+        const items = [
+            { url: '/outputs/womenswear_studio/3174cfdb6365/raw_product.jpg', inputId: 'rawProductInput', name: '示例模特图.jpg', type: 'image' },
+            { url: '/outputs/womenswear_studio/3174cfdb6365/source_video.mp4', inputId: 'sourceVideoInput', name: '示例模仿视频.mp4', type: 'video' },
+        ];
+        for (const it of items) {
+            const resp = await fetch(it.url);
+            if (!resp.ok) throw new Error('获取示例素材失败: ' + it.url);
+            const blob = await resp.blob();
+            const file = new File([blob], it.name, { type: it.type === 'image' ? 'image/jpeg' : 'video/mp4' });
+            const input = document.getElementById(it.inputId);
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change'));
+        }
+        toastOrLog('✅ 示例素材已载入，点击「开始生成」即可体验完整流程');
+    } catch (e) {
+        alert('载入示例失败: ' + e.message);
+    }
+}
+function toastOrLog(msg) {
+    const box = document.getElementById('logBox');
+    if (box) {
+        const div = document.createElement('div');
+        div.style.cssText = 'color:#7dd3fc;font-size:.82em;padding:2px 0;';
+        div.textContent = msg;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+}
+
+// ───── 新手引导：首次访问弹窗（localStorage 持久化「不再提示」） ─────
+function closeOnboard() {
+    const ov = document.getElementById('onboardOverlay');
+    if (ov) ov.style.display = 'none';
+    try {
+        if (document.getElementById('onboardNeverShow') && document.getElementById('onboardNeverShow').checked) {
+            localStorage.setItem('ws_onboard_done', '1');
+        }
+    } catch (e) {}
+}
+function maybeShowOnboard() {
+    try {
+        if (!localStorage.getItem('ws_onboard_done')) {
+            document.getElementById('onboardOverlay').style.display = 'flex';
+        }
+    } catch (e) {}
+}
+maybeShowOnboard();
+
+// ───── 首次启动引导（三页，不可关闭）：弹出标准 = RunningHub 登录 Cookie 没了就弹 ─────
+let frPollTimer = null;
+
+async function initFirstRunGuide() {
+    try {
+        const resp = await fetch('/api/onboard/status');
+        if (!resp.ok) return;
+        const st = await resp.json();
+        if (st.need_guide) frShowGuide();
+    } catch (e) {
+        console.warn('[引导] 状态检查失败:', e);
+    }
+}
+
+// Cookie 失效 → 弹三步引导（页面加载 / 定时看门狗 / 任务失败时都会走这里）
+function frShowGuide() {
+    const overlay = document.getElementById('firstRunOverlay');
+    if (overlay.style.display === 'block') return;  // 已打开不重弹，避免打断正在操作的步骤
+    // Cookie 没了 → 弹三页引导；同时收起旧的提示弹窗
+    const old = document.getElementById('onboardOverlay');
+    if (old) old.style.display = 'none';
+    overlay.style.display = 'block';
+    frEnableNext1(false);  // 回到第 1 步重新等登录 Cookie 检测
+    frShowStep(1);
+    frStartPoll();
+}
+
+function frShowStep(n) {
+    document.getElementById('frStep1').style.display = (n === 1) ? 'block' : 'none';
+    document.getElementById('frStep2').style.display = (n === 2) ? 'block' : 'none';
+    document.getElementById('frStep3').style.display = (n === 3) ? 'block' : 'none';
+    document.getElementById('frStepIndicator').textContent = `第 ${n} 步 / 共 3 步`;
+    if (n === 2) frPrefillAgnes();
+}
+
+function frEnableNext1(on) {
+    const btn = document.getElementById('frNext1');
+    if (!btn) return;
+    btn.disabled = !on;
+    btn.style.cursor = on ? 'pointer' : 'not-allowed';
+    btn.style.background = on ? 'linear-gradient(90deg,#0ea5e9,#6366f1)' : '#3a3a5c';
+    btn.style.color = on ? '#fff' : '#6b7280';
+}
+
+function frEnableNext2(on) {
+    const btn = document.getElementById('frNext2');
+    if (!btn) return;
+    btn.disabled = !on;
+    btn.style.cursor = on ? 'pointer' : 'not-allowed';
+    btn.style.background = on ? 'linear-gradient(90deg,#0ea5e9,#6366f1)' : '#3a3a5c';
+    btn.style.color = on ? '#fff' : '#6b7280';
+}
+
+async function frOpenRhLogin() {
+    const btn = document.getElementById('frOpenRhBtn');
+    const status = document.getElementById('frRhStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ 正在打开浏览器…';
+    try {
+        const resp = await fetch('/api/onboard/rh/login', { method: 'POST' });
+        const r = await resp.json();
+        if (!resp.ok) throw new Error(r.detail || '打开失败');
+        status.textContent = '🌐 ' + (r.message || '已打开浏览器，请在弹出的窗口里完成注册/登录');
+        status.style.color = '#93c5fd';
+        frStartPoll();
+    } catch (e) {
+        status.textContent = '❌ ' + e.message;
+        status.style.color = '#f87171';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🌐 打开注册/登录页';
+    }
+}
+
+function frStartPoll() {
+    if (frPollTimer) return;
+    frPollTimer = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/onboard/status');
+            if (!resp.ok) return;
+            const st = await resp.json();
+            const status = document.getElementById('frRhStatus');
+            // Cookie 还在 / 登录成功 → 下一步按钮点亮
+            if (st.cookie_alive || st.login_ok) {
+                status.textContent = '✅ 已检测到 RunningHub 登录 Cookie，下一步已亮起';
+                status.style.color = '#4ade80';
+                frEnableNext1(true);
+            } else if (st.login_running) {
+                status.textContent = '⏳ 等待登录中…请在弹出的浏览器里完成注册/登录';
+                status.style.color = '#fbbf24';
+            } else if (st.login_error) {
+                status.textContent = '❌ ' + st.login_error;
+                status.style.color = '#f87171';
+            }
+        } catch (e) { /* 网络抖动忽略 */ }
+    }, 2500);
+}
+
+function frStopPoll() {
+    if (frPollTimer) {
+        clearInterval(frPollTimer);
+        frPollTimer = null;
+    }
+}
+
+async function frStep1Next() {
+    const btn = document.getElementById('frNext1');
+    btn.disabled = true;
+    btn.textContent = '⏳ 正在注入动作迁移工作流…';
+    try {
+        const resp = await fetch('/api/onboard/rh/inject', { method: 'POST' });
+        const r = await resp.json();
+        if (!resp.ok) throw new Error(r.detail || '注入失败');
+        frStopPoll();
+        frShowStep(2);
+    } catch (e) {
+        alert('注入动作迁移工作流失败：' + (e.message || e));
+        frEnableNext1(true);
+    } finally {
+        btn.textContent = '下一步（自动注入动作迁移工作流）';
+    }
+}
+
+async function frPrefillAgnes() {
+    try {
+        const resp = await fetch('/api/settings/agnes');
+        if (!resp.ok) return;
+        const r = await resp.json();
+        if (r.base_url) document.getElementById('frAgnesBaseUrl').value = r.base_url;
+        if (r.image_model) document.getElementById('frAgnesImageModel').value = r.image_model;
+        if (r.vision_model) document.getElementById('frAgnesVisionModel').value = r.vision_model;
+        // key 已配置过（例如 Cookie 失效重弹引导）则下一步直接亮，不必重填
+        if (r.api_key_set) {
+            frEnableNext2(true);
+            document.getElementById('frAgnesHint').textContent = '✅ 已配置过 API Key，留空则沿用现有 Key';
+            document.getElementById('frAgnesHint').style.color = '#4ade80';
+        }
+    } catch (e) { /* 忽略 */ }
+    frCheckAgnesKey();
+}
+
+function frCheckAgnesKey() {
+    const key = (document.getElementById('frAgnesKey').value || '').trim();
+    const hint = document.getElementById('frAgnesHint');
+    if (key) {
+        frEnableNext2(true);
+        hint.textContent = '✅ 已填写 API Key，点击「下一步」保存';
+        hint.style.color = '#4ade80';
+    } else if (!document.getElementById('frNext2').disabled) {
+        // 已有 key 的情况保持亮
+    } else {
+        frEnableNext2(false);
+        hint.textContent = '填写 API Key 后「下一步」才会亮起';
+        hint.style.color = '#6b7280';
+    }
+}
+
+async function frStep2Next() {
+    const btn = document.getElementById('frNext2');
+    btn.disabled = true;
+    btn.textContent = '⏳ 保存中…';
+    try {
+        const key = (document.getElementById('frAgnesKey').value || '').trim();
+        const resp = await fetch('/api/settings/agnes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                base_url: document.getElementById('frAgnesBaseUrl').value.trim(),
+                image_model: document.getElementById('frAgnesImageModel').value.trim(),
+                vision_model: document.getElementById('frAgnesVisionModel').value.trim(),
+                api_key: key,  // 留空 = 沿用现有 key
+            }),
+        });
+        const r = await resp.json();
+        if (!resp.ok) throw new Error(r.detail || '保存失败');
+        frShowStep(3);
+    } catch (e) {
+        alert('保存 Agnes 配置失败：' + (e.message || e));
+        frEnableNext2(true);
+    } finally {
+        btn.textContent = '下一步';
+    }
+}
+
+function frLoadExample() {
+    document.getElementById('firstRunOverlay').style.display = 'none';
+    frStopPoll();
+    loadExampleTask();
+}
+
+function frCancelGuide() {
+    document.getElementById('firstRunOverlay').style.display = 'none';
+    frStopPoll();
+}
+
+</script>
+</body>
+</html>

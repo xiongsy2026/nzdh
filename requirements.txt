@@ -1,0 +1,20 @@
+# Unified dependency list (64-bit Windows Python 3.10 - 3.14).
+# NOTE: keep this file pure ASCII -- pip on Chinese Windows decodes it with
+# cp936 and non-ASCII comments break installation.
+# Version ranges follow the dev-tested set; vendor ships wheels for each
+# Python version and pip picks the right binary wheel per interpreter.
+fastapi>=0.115,<0.145
+uvicorn[standard]>=0.51,<0.52
+python-multipart>=0.0.6,<0.1
+pydantic>=2.10,<3
+pydantic-settings>=2.7,<3
+httpx>=0.26,<0.29
+requests>=2.31,<3
+Pillow>=10.2,<13
+playwright>=1.49,<2
+python-dotenv>=1.0,<2
+aiofiles>=23.2,<25
+moviepy>=1.0.3
+yt-dlp>=2024.1.0
+runninghub-sdk==1.1.9
+opencv-python-headless>=4.8.0

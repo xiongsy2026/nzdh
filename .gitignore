@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 环境与凭证
+.env
+.env.bak-*
+*_token.json
+rh_account_state.json
+
+# 数据库
+*.db
+!**/*.db.example
+
+# 打包产物（体积大，重复）
+dist/
+build/
+*.spec
+动作迁移工作台.exe
+
+# 备份目录
+_bak-*/
+
+# 浏览器自动化 profile（含 cookie、session、敏感缓存）
+rh_profiles/
+runninghub_profile/
+
+# 日志
+logs/
+_svc_*.log
+_svc_*.log.*
+
+# frp 内网穿透二进制
+frpc/frpc.exe
+
+# 其他
+outputs/
+uploads/img_*
+uploads/video_*
+.idea/
+.vscode/
+*.swp
+.DS_Store

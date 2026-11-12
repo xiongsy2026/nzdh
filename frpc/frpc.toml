@@ -1,0 +1,14 @@
+serverAddr = "43.139.42.21"
+serverPort = 7000
+auth.method = "token"
+auth.token = "Xk9mQ2vR7pLw4zTn2026dsh"
+
+# 本机 nzdh worker(8091) 穿透到服务器 127.0.0.1:18101，
+# 服务器网关(motion_gateway_workers.json: ws1)指到这里。
+# 其它机器入池：复制本目录改 name/localPort/remotePort 即可。
+[[proxies]]
+name = "motion-ws1"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 8091
+remotePort = 18101

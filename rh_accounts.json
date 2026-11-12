@@ -1,0 +1,32 @@
+{
+  "_comment": "RunningHub 账号库。每账号一个独立 profile 目录：d:\\nzdh\\rh_profiles\\rh_<phone>",
+  "_design": [
+    "调度策略：串行队列（同时只跑 1 个 RPA 任务）",
+    "Profile 隔离：每账号独立 profile 目录，互不干扰",
+    "换号触发：未登录/登录失效、RunningHub 报风控/限流、并发限制（每账号一次只能跑 1 个任务）",
+    "首次启动：app.py 启动时自动给 status=pending 的账号做首次登录，登录成功标 ready"
+  ],
+  "accounts": [
+    {
+      "phone": "18035142166",
+      "password": "scx231s231scx",
+      "note": "原账号（本包 rh_profiles/rh_18035142166）",
+      "enabled": true,
+      "profile_dir": ""
+    },
+    {
+      "phone": "18900279795",
+      "password": "zhh235689",
+      "note": "新账号（2026-09-24 新增）",
+      "enabled": true,
+      "profile_dir": ""
+    },
+    {
+      "phone": "13675062881",
+      "password": "scx231s231scx",
+      "note": "二期修复后重试",
+      "enabled": true,
+      "profile_dir": ""
+    }
+  ]
+}

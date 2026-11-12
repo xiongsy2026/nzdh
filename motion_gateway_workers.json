@@ -1,0 +1,11 @@
+{
+  "_comment": "调用池 worker 清单（网关热读，改完即生效）。name 必须等于该机 config.MOTION_WORKER_ID；key 是该机 MOTION_API_KEYS 之一；url 指向该机 8091。本文件含各机 Key，别外传。",
+  "workers": [
+    {
+      "name": "ws1",
+      "url": "http://127.0.0.1:8095",
+      "key": "smoke-key-1",
+      "weight": 1
+    }
+  ]
+}
